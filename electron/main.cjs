@@ -247,8 +247,34 @@ if (!gotLock) {
   }
 
   async function createWindow() {
+    // Inicializa listeners e dispara uma única checagem durante o boot. A
+    // promessa não é aguardada, portanto feed/download nunca bloqueia o app.
+    try {
+      updater.start();
+      if (updater.isEnabled()) {
+        updater.checkOnStartup();
+      }
+    } catch (error) {
+      console.warn(`Falha ao iniciar o atualizador: ${error.message}`);
+    }
+    // Janela isolada, sem preload/IPC: dá feedback imediato enquanto a escolha
+    // do banco, migrations e boot do Next acontecem no processo principal.
+    const splashWindow = new BrowserWindow({
+      width: 420,
+      height: 260,
+      resizable: false,
+      frame: false,
+      show: true,
+      center: true,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    splashWindow.loadFile(path.join(__dirname, "splash.html"));
     const databasePath = await databaseManager.chooseDatabase();
     if (!databasePath) {
+      if (!splashWindow.isDestroyed()) splashWindow.close();
       app.quit();
       return;
     }
@@ -259,6 +285,7 @@ if (!gotLock) {
       // A preferência só é salva depois da migração: se o banco falhar, a próxima
       // abertura volta a oferecer a escolha em vez de repetir o mesmo erro.
       dialog.showErrorBox("Não foi possível atualizar o banco", error.message);
+      if (!splashWindow.isDestroyed()) splashWindow.close();
       app.quit();
       return;
     }
@@ -312,14 +339,11 @@ if (!gotLock) {
         openExternal(url);
       });
       await mainWindow.loadURL(serverUrl);
-      // Idempotente: `activate` pode recriar a janela e não reinicia o agendador.
-      try {
-        updater.start();
-      } catch (error) {
-        console.warn(`Falha ao iniciar o atualizador: ${error.message}`);
-      }
+      if (!splashWindow.isDestroyed()) splashWindow.close();
+      // start/check são idempotentes/single-flight; recriar a janela não duplica.
     } catch (error) {
       console.error(error);
+      if (!splashWindow.isDestroyed()) splashWindow.close();
       app.quit();
     }
   }

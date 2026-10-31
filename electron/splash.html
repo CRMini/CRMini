@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Iniciando o CRMini</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 260px; display: grid; place-items: center; background: #f8fafc; color: #172033; }
+      main { text-align: center; padding: 28px; }
+      h1 { margin: 12px 0 6px; font-size: 20px; }
+      p { margin: 0; color: #526078; }
+      .mark { width: 42px; height: 42px; border: 4px solid #dbe4f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: auto; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .mark { animation: none; border-top-color: #2563eb; } }
+    </style>
+  </head>
+  <body>
+    <main aria-live="polite" aria-busy="true">
+      <div class="mark" aria-hidden="true"></div>
+      <h1>Iniciando o CRMini</h1>
+      <p>Preparando o banco de dados e carregando o sistema…</p>
+    </main>
+  </body>
+</html>

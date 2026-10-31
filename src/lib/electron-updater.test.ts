@@ -42,6 +42,7 @@ type Updater = {
   stop: () => void;
   getSnapshot: () => UpdateSnapshot;
   check: (options?: { manual?: boolean }) => Promise<UpdaterResult>;
+  checkOnStartup: () => void;
   download: () => Promise<UpdaterResult>;
   install: () => Promise<UpdaterResult>;
   handleAutoUpdaterEvent: (name: string, payload?: unknown) => UpdateSnapshot;
@@ -888,6 +889,27 @@ describe("createUpdater: concorrência", () => {
 });
 
 describe("createUpdater: agendamento", () => {
+  it("permite disparar a checagem no boot sem esperar o timer inicial", async () => {
+    const { updater, scheduler, autoUpdater } = setup();
+    let resolveCheck!: () => void;
+    autoUpdater.checkForUpdates.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveCheck = resolve;
+      }),
+    );
+
+    updater.start();
+    const checking = updater.check();
+
+    expect(updater.getSnapshot().status).toBe("checking");
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(scheduler.delays).toEqual([10_000]);
+
+    resolveCheck();
+    await checking;
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
   it("primeira checagem ocorre após initialDelayMs e agenda intervalMs", async () => {
     const { updater, scheduler, autoUpdater, tick } = setup();
 
@@ -966,6 +988,22 @@ describe("createUpdater: agendamento", () => {
 
     expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(storageState.lastCheckAt).toBe(clock.value);
+  });
+
+  it("startup checa imediatamente quando permitido e preserva o agendamento no cooldown", async () => {
+    const allowed = setup();
+    allowed.updater.start();
+    allowed.updater.checkOnStartup();
+    expect(allowed.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    await flush();
+    expect(allowed.scheduler.delays).toEqual([10_000, 4 * 60 * 60 * 1000]);
+
+    const recent = setup();
+    recent.storageState.lastCheckAt = recent.clock.value - 5 * 60e3;
+    recent.updater.start();
+    recent.updater.checkOnStartup();
+    expect(recent.autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+    expect(recent.scheduler.delays.at(-1)).toBe(25 * 60e3);
   });
 
   it("checagem manual não agenda o próximo ciclo", async () => {

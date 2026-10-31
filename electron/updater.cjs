@@ -320,6 +320,7 @@ function createUpdater({
       scheduleNext(remaining);
       return;
     }
+    clearTimer();
     check().catch((error) => {
       logger.error(
         `Falha inesperada ao verificar atualizações: ${rawMessage(error)}`,
@@ -670,6 +671,7 @@ function createUpdater({
     stop,
     getSnapshot,
     check,
+    checkOnStartup: runAutomaticCheck,
     download,
     install,
     handleAutoUpdaterEvent,
