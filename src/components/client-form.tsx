@@ -7,6 +7,12 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { CLIENT_SEGMENTS } from "@/lib/segments";
 import { formatPhone, formatPhoneForDisplay } from "@/lib/phone";
+import {
+  formatCep,
+  formatCepForDisplay,
+  formatCnpj,
+  formatCnpjForDisplay,
+} from "@/lib/masks";
 
 type Contact = {
   id?: string;
@@ -84,6 +90,8 @@ export default function ClientForm({ id }: { id?: string }) {
           setData({
             ...initial,
             ...result,
+            tax_id: formatCnpjForDisplay(result.tax_id),
+            postal_code: formatCepForDisplay(result.postal_code),
             phone: formatPhoneForDisplay(result.phone),
             contacts: result.contacts?.length
               ? result.contacts.map((contact: Contact) => ({
@@ -238,6 +246,8 @@ export default function ClientForm({ id }: { id?: string }) {
               label="CNPJ"
               value={data.tax_id}
               onChange={(v) => update("tax_id", v)}
+              format={formatCnpj}
+              placeholder="00.000.000/0000-00"
             />
             <label className="form-field">
               <span>Segmento</span>
@@ -286,6 +296,8 @@ export default function ClientForm({ id }: { id?: string }) {
               label="CEP"
               value={data.postal_code}
               onChange={(v) => update("postal_code", v)}
+              format={formatCep}
+              placeholder="00000-000"
             />
             <Field
               label="País"

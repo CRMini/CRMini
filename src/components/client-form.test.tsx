@@ -21,6 +21,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/image", () => ({ default: () => null }));
 
 import ClientForm from "./client-form";
+import { formatCep, formatCnpj } from "@/lib/masks";
 import { formatPhone } from "@/lib/phone";
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
@@ -483,5 +484,161 @@ describe("ClientForm — máscara de telefone", () => {
       phone: "+1 (555) 123-4567 ramal 9",
       mobile: "0800 123 4567",
     });
+  });
+});
+
+describe("ClientForm — máscaras de CNPJ e CEP", () => {
+  it("mascara CNPJ e CEP ao digitar e envia os valores mascarados", async () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+    const taxId = screen.getByRole("textbox", { name: "CNPJ" });
+    const postalCode = screen.getByRole("textbox", { name: "CEP" });
+
+    expect(taxId).toHaveAttribute("placeholder", "00.000.000/0000-00");
+    expect(postalCode).toHaveAttribute("placeholder", "00000-000");
+
+    let maskedTaxId = "";
+    for (const character of "12345678000199") {
+      const typed = `${maskedTaxId}${character}`;
+      fireEvent.change(taxId, { target: { value: typed } });
+      maskedTaxId = formatCnpj(typed);
+      expect(taxId).toHaveValue(maskedTaxId);
+    }
+    expect(taxId).toHaveValue("12.345.678/0001-99");
+
+    let maskedPostalCode = "";
+    for (const character of "01310100") {
+      const typed = `${maskedPostalCode}${character}`;
+      fireEvent.change(postalCode, { target: { value: typed } });
+      maskedPostalCode = formatCep(typed);
+      expect(postalCode).toHaveValue(maskedPostalCode);
+    }
+    expect(postalCode).toHaveValue("01310-100");
+
+    fireEvent.change(screen.getByRole("textbox", { name: /Razão social/ }), {
+      target: { value: "Aurora Tecnologia" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /Nome completo/ }), {
+      target: { value: "Ana Souza" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cliente" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/clients",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.tax_id).toBe("12.345.678/0001-99");
+    expect(body.postal_code).toBe("01310-100");
+  });
+
+  it("carrega CNPJ e CEP sem máscara na edição, exibe mascarados e preserva no PUT", async () => {
+    const fetchMock = mockFetch((_url, init) =>
+      init?.method === "PUT"
+        ? jsonResponse({ id: "client-1" })
+        : jsonResponse(
+            savedClient({
+              tax_id: "12345678000199",
+              postal_code: "01310100",
+            }),
+          ),
+    );
+    render(<ClientForm id="client-1" />);
+
+    const taxId = screen.getByRole("textbox", { name: "CNPJ" });
+    const postalCode = screen.getByRole("textbox", { name: "CEP" });
+
+    await waitFor(() => expect(taxId).toHaveValue("12.345.678/0001-99"));
+    expect(postalCode).toHaveValue("01310-100");
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cliente" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/clients/client-1",
+        expect.objectContaining({ method: "PUT" }),
+      ),
+    );
+    const putCall = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+    )!;
+    const body = JSON.parse((putCall[1] as RequestInit).body as string);
+    expect(body.tax_id).toBe("12.345.678/0001-99");
+    expect(body.postal_code).toBe("01310-100");
+  });
+
+  it("preserva CNPJ e CEP legados não editados ao salvar outro campo", async () => {
+    const fetchMock = mockFetch((_url, init) =>
+      init?.method === "PUT"
+        ? jsonResponse({ id: "client-1" })
+        : jsonResponse(
+            savedClient({
+              tax_id: "CNPJ pendente",
+              postal_code: "01310",
+            }),
+          ),
+    );
+    render(<ClientForm id="client-1" />);
+
+    const taxId = screen.getByRole("textbox", { name: "CNPJ" });
+    const postalCode = screen.getByRole("textbox", { name: "CEP" });
+
+    await waitFor(() => expect(taxId).toHaveValue("CNPJ pendente"));
+    expect(postalCode).toHaveValue("01310");
+
+    fireEvent.change(siteField(), { target: { value: "example.org" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cliente" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/clients/client-1",
+        expect.objectContaining({ method: "PUT" }),
+      ),
+    );
+    const putCall = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+    )!;
+    const body = JSON.parse((putCall[1] as RequestInit).body as string);
+    expect(body.tax_id).toBe("CNPJ pendente");
+    expect(body.postal_code).toBe("01310");
+  });
+
+  it("preserva CNPJ e CEP legados com texto descritivo no PUT", async () => {
+    const fetchMock = mockFetch((_url, init) =>
+      init?.method === "PUT"
+        ? jsonResponse({ id: "client-1" })
+        : jsonResponse(
+            savedClient({
+              tax_id: "CNPJ: 12345678000199",
+              postal_code: "CEP: 01310-100",
+            }),
+          ),
+    );
+    render(<ClientForm id="client-1" />);
+
+    const taxId = screen.getByRole("textbox", { name: "CNPJ" });
+    const postalCode = screen.getByRole("textbox", { name: "CEP" });
+
+    await waitFor(() => expect(taxId).toHaveValue("CNPJ: 12345678000199"));
+    expect(postalCode).toHaveValue("CEP: 01310-100");
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cliente" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/clients/client-1",
+        expect.objectContaining({ method: "PUT" }),
+      ),
+    );
+    const putCall = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+    )!;
+    const body = JSON.parse((putCall[1] as RequestInit).body as string);
+    expect(body.tax_id).toBe("CNPJ: 12345678000199");
+    expect(body.postal_code).toBe("CEP: 01310-100");
   });
 });
