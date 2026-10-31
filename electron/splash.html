@@ -2,25 +2,31 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src file:; style-src 'unsafe-inline'; script-src 'sha256-BmbGioIqcXeg+8iNnIEgKGpaIQqNFeB/kGqQXFBBupw=';" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Iniciando o CRMini</title>
     <style>
       :root { color-scheme: light; font-family: system-ui, sans-serif; }
-      body { margin: 0; min-height: 260px; display: grid; place-items: center; background: #f8fafc; color: #172033; }
+      body { margin: 0; min-height: 260px; display: grid; place-items: center; background: #F5F7F6; color: #202A32; }
       main { text-align: center; padding: 28px; }
-      h1 { margin: 12px 0 6px; font-size: 20px; }
+      img { display: block; width: min(280px, 80vw); height: auto; margin: 0 auto 20px; }
+      h1 { margin: 0 0 6px; font-size: 20px; }
       p { margin: 0; color: #526078; }
-      .mark { width: 42px; height: 42px; border: 4px solid #dbe4f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite; margin: auto; }
+      .mark { width: 28px; height: 28px; border: 3px solid #dbe4f0; border-top-color: #03B140; border-radius: 50%; animation: spin 1s linear infinite; margin: auto auto 14px; }
       @keyframes spin { to { transform: rotate(360deg); } }
-      @media (prefers-reduced-motion: reduce) { .mark { animation: none; border-top-color: #2563eb; } }
+      @media (prefers-reduced-motion: reduce) { .mark { animation: none; border-top-color: #03B140; } }
     </style>
   </head>
   <body>
     <main aria-live="polite" aria-busy="true">
+      <img id="brand-logo" alt="CRMini" />
       <div class="mark" aria-hidden="true"></div>
       <h1>Iniciando o CRMini</h1>
       <p>Preparando o banco de dados e carregando o sistema…</p>
     </main>
+    <script>
+      const logoUrl = new URLSearchParams(location.search).get("logo");
+      if (logoUrl) document.getElementById("brand-logo").src = logoUrl;
+    </script>
   </body>
 </html>

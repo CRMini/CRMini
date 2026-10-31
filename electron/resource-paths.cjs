@@ -19,4 +19,8 @@ function databaseDir(resourcesDir) {
   return path.join(resourcesDir, "database");
 }
 
-module.exports = { standaloneDir, dataDir, databaseDir };
+function brandAssetPath(resourcesDir, filename) {
+  return path.join(resourcesDir, "public", "brand", filename);
+}
+
+module.exports = { standaloneDir, dataDir, databaseDir, brandAssetPath };

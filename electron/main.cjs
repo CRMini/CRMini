@@ -1,11 +1,12 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 const { applyMigrations } = require("./database-migrations.cjs");
 const { createDatabaseManager } = require("./database-manager.cjs");
 const { createServerLifecycle } = require("./server-lifecycle.cjs");
 const { createServerShutdown } = require("./server-shutdown.cjs");
-const { standaloneDir } = require("./resource-paths.cjs");
+const { standaloneDir, brandAssetPath } = require("./resource-paths.cjs");
 const {
   assetsDirFor,
   legacyAssetsDir,
@@ -271,7 +272,13 @@ if (!gotLock) {
         nodeIntegration: false,
       },
     });
-    splashWindow.loadFile(path.join(__dirname, "splash.html"));
+    splashWindow.loadFile(path.join(__dirname, "splash.html"), {
+      query: {
+        logo: pathToFileURL(
+          brandAssetPath(resourcesDir, "crmini-horizontal-light.svg"),
+        ).href,
+      },
+    });
     const databasePath = await databaseManager.chooseDatabase();
     if (!databasePath) {
       if (!splashWindow.isDestroyed()) splashWindow.close();

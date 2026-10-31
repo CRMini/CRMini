@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="400" viewBox="0 0 1400 400"><g transform="translate(25 15) scale(.72)">
+<circle cx="111" cy="160" r="48" fill="#72D99A"/><path d="M59 220 Q59 204 82 204 H143 Q155 204 161 211 Q135 243 135 283 V381 H93 Q55 381 55 343 V252 Q55 230 59 220Z" fill="#72D99A"/>
+<circle cx="401" cy="160" r="48" fill="#72D99A"/><path d="M453 220 Q453 204 430 204 H369 Q357 204 351 211 Q377 243 377 283 V381 H419 Q457 381 457 343 V252 Q457 230 453 220Z" fill="#72D99A"/>
+<circle cx="256" cy="122" r="69" fill="#03B140"/><rect x="151" y="207" width="210" height="215" rx="51" fill="#03B140"/>
+<rect x="200" y="324" width="27" height="57" rx="10" fill="white"/><rect x="242" y="296" width="27" height="85" rx="10" fill="white"/><rect x="284" y="264" width="27" height="117" rx="10" fill="white"/>
+</g><text x="430" y="265" font-family="DejaVu Sans,Arial,sans-serif" font-size="196" font-weight="bold" letter-spacing="-9" fill="white">CRM</text><text x="920" y="265" font-family="DejaVu Sans,Arial,sans-serif" font-size="196" font-weight="bold" letter-spacing="-9" fill="#03B140">ini</text></svg>

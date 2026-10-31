@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { standaloneDir, dataDir, databaseDir } =
+const { standaloneDir, dataDir, databaseDir, brandAssetPath } =
   require("../../electron/resource-paths.cjs") as {
     standaloneDir: (options: {
       app?: { isPackaged?: boolean };
@@ -12,6 +12,7 @@ const { standaloneDir, dataDir, databaseDir } =
     }) => string;
     dataDir: (app: { getPath: (name: string) => string }) => string;
     databaseDir: (resourcesDir: string) => string;
+    brandAssetPath: (resourcesDir: string, filename: string) => string;
   };
 
 const originalResourcesPath = Object.getOwnPropertyDescriptor(
@@ -67,6 +68,14 @@ describe("databaseDir", () => {
   it("aponta para a subpasta database do diretório de recursos", () => {
     expect(databaseDir("/opt/crmini/resources/app")).toBe(
       path.join("/opt/crmini/resources/app", "database"),
+    );
+  });
+});
+
+describe("brandAssetPath", () => {
+  it("resolve o logo sob public/brand no diretório servido/empacotado", () => {
+    expect(brandAssetPath("/app/resources/app", "crmini-horizontal-light.svg")).toBe(
+      path.join("/app/resources/app", "public", "brand", "crmini-horizontal-light.svg"),
     );
   });
 });
