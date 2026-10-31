@@ -35,17 +35,17 @@ describe("SQLite paths", () => {
         env: { XDG_DATA_HOME: "/data" },
         home: "/home/test",
       }),
-    ).toBe("/data/crminho/crm.sqlite");
+    ).toBe("/data/CRMini/crm.sqlite");
     expect(
       defaultDatabasePath({ platform: "darwin", env: {}, home: "/Users/test" }),
-    ).toBe("/Users/test/Library/Application Support/crminho/crm.sqlite");
+    ).toBe("/Users/test/Library/Application Support/CRMini/crm.sqlite");
     expect(
       defaultDatabasePath({
         platform: "win32",
         env: {},
         home: "C:/Users/test",
       }),
-    ).toBe("C:/Users/test/AppData/Roaming/crminho/crm.sqlite");
+    ).toBe("C:/Users/test/AppData/Roaming/CRMini/crm.sqlite");
     expect(
       defaultDatabasePath({ env: { SQLITE_PATH: "/custom.sqlite" } }),
     ).toBe("/custom.sqlite");

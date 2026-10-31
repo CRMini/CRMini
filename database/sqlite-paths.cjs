@@ -15,7 +15,7 @@ function defaultDatabasePath({
   if (platform === "win32")
     return path.join(
       env.APPDATA || path.join(home, "AppData", "Roaming"),
-      "crminho",
+      "CRMini",
       "crm.sqlite",
     );
   if (platform === "darwin")
@@ -23,12 +23,12 @@ function defaultDatabasePath({
       home,
       "Library",
       "Application Support",
-      "crminho",
+      "CRMini",
       "crm.sqlite",
     );
   return path.join(
     env.XDG_DATA_HOME || path.join(home, ".local", "share"),
-    "crminho",
+    "CRMini",
     "crm.sqlite",
   );
 }
