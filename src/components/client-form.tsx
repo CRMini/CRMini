@@ -4,8 +4,9 @@ import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { CLIENT_SEGMENTS } from "@/lib/segments";
+import { type CepAddress, isValidCep, normalizeCep } from "@/lib/cep";
 import { formatPhone, formatPhoneForDisplay } from "@/lib/phone";
 import {
   formatCep,
@@ -80,7 +81,9 @@ export default function ClientForm({ id }: { id?: string }) {
   const router = useRouter();
   const [data, setData] = useState<FormData>(initial);
   const [error, setError] = useState("");
+  const [postalCodeError, setPostalCodeError] = useState("");
   const [saving, setSaving] = useState(false);
+  const cepRequestId = useRef(0);
   useEffect(() => {
     if (id)
       fetch(`/api/clients/${id}`)
@@ -109,6 +112,48 @@ export default function ClientForm({ id }: { id?: string }) {
 
   function update<K extends keyof FormData>(key: K, value: FormData[K]) {
     setData((current) => ({ ...current, [key]: value }));
+  }
+  async function lookupPostalCode(value: string) {
+    const requestId = ++cepRequestId.current;
+
+    if (!value.trim()) {
+      setPostalCodeError("");
+      return;
+    }
+
+    if (!isValidCep(value)) {
+      setPostalCodeError("CEP inválido. Informe os 8 dígitos.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/cep?cep=${normalizeCep(value)}`);
+      const result = (await response.json().catch(() => null)) as
+        (Partial<CepAddress> & { error?: string }) | null;
+
+      if (requestId !== cepRequestId.current) return;
+
+      if (!response.ok) {
+        setPostalCodeError(
+          result?.error || "Não foi possível consultar o CEP. Tente novamente.",
+        );
+        return;
+      }
+
+      setPostalCodeError("");
+      setData((current) => ({
+        ...current,
+        ...(result?.street ? { street: result.street } : {}),
+        ...(result?.city ? { city: result.city } : {}),
+        ...(result?.state ? { state: result.state } : {}),
+        ...(current.country ? {} : { country: "Brasil" }),
+      }));
+    } catch {
+      if (requestId !== cepRequestId.current) return;
+      setPostalCodeError(
+        "Não foi possível consultar o CEP. Verifique sua conexão e tente novamente.",
+      );
+    }
   }
   function updateContact(
     index: number,
@@ -295,7 +340,12 @@ export default function ClientForm({ id }: { id?: string }) {
             <Field
               label="CEP"
               value={data.postal_code}
-              onChange={(v) => update("postal_code", v)}
+              onChange={(v) => {
+                update("postal_code", v);
+                if (postalCodeError) setPostalCodeError("");
+              }}
+              onBlur={() => lookupPostalCode(data.postal_code)}
+              error={postalCodeError}
               format={formatCep}
               placeholder="00000-000"
             />
@@ -457,6 +507,8 @@ function Field({
   label,
   value,
   onChange,
+  onBlur,
+  error = "",
   type = "text",
   required = false,
   placeholder = "",
@@ -465,23 +517,37 @@ function Field({
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
+  error?: string;
   type?: string;
   required?: boolean;
   placeholder?: string;
   format?: (value: string) => string;
 }) {
+  const inputId = useId();
+  const errorId = `${inputId}-error`;
+
   return (
-    <label className="form-field">
-      <span>{label}</span>
+    <div className={`form-field${error ? " has-error" : ""}`}>
+      <label htmlFor={inputId}>{label}</label>
       <input
+        id={inputId}
         type={type}
         value={value || ""}
         required={required}
         placeholder={placeholder}
+        onBlur={onBlur}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         onChange={(event) =>
           onChange(format ? format(event.target.value) : event.target.value)
         }
       />
-    </label>
+      {error && (
+        <span id={errorId} className="form-field-error" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
   );
 }

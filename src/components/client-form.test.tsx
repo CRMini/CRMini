@@ -487,6 +487,139 @@ describe("ClientForm — máscara de telefone", () => {
   });
 });
 
+describe("ClientForm — autocomplete de CEP", () => {
+  function field(label: string) {
+    return screen.getByRole("textbox", { name: label });
+  }
+
+  it("consulta o CEP ao sair do campo e preenche o endereço", async () => {
+    const fetchMock = mockFetch((url) =>
+      url.startsWith("/api/cep")
+        ? jsonResponse({
+            postal_code: "01310-100",
+            street: "Avenida Paulista",
+            city: "São Paulo",
+            state: "SP",
+          })
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+
+    fireEvent.change(field("País"), { target: { value: "" } });
+    fireEvent.change(field("Número"), { target: { value: "1000" } });
+    fireEvent.change(field("Complemento"), { target: { value: "Apto 5" } });
+    const postalCode = field("CEP");
+    fireEvent.change(postalCode, { target: { value: "01310100" } });
+
+    expect(postalCode).toHaveValue("01310-100");
+    fireEvent.blur(postalCode);
+
+    await waitFor(() =>
+      expect(field("Logradouro")).toHaveValue("Avenida Paulista"),
+    );
+    expect(field("Cidade")).toHaveValue("São Paulo");
+    expect(field("Estado")).toHaveValue("SP");
+    expect(field("País")).toHaveValue("Brasil");
+    expect(field("Número")).toHaveValue("1000");
+    expect(field("Complemento")).toHaveValue("Apto 5");
+    expect(fetchMock).toHaveBeenCalledWith("/api/cep?cep=01310100");
+    expect(postalCode).not.toHaveAttribute("aria-invalid");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("sinaliza CEP inválido e não altera os demais campos do endereço", () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+
+    fireEvent.change(field("Logradouro"), {
+      target: { value: "Rua Existente" },
+    });
+    fireEvent.change(field("Cidade"), { target: { value: "Campinas" } });
+    fireEvent.change(field("Estado"), { target: { value: "SP" } });
+    fireEvent.change(field("Número"), { target: { value: "42" } });
+
+    const postalCode = field("CEP");
+    fireEvent.change(postalCode, { target: { value: "123" } });
+    fireEvent.blur(postalCode);
+
+    expect(
+      screen.getByText("CEP inválido. Informe os 8 dígitos."),
+    ).toHaveAttribute("role", "alert");
+    expect(postalCode).toHaveAttribute("aria-invalid", "true");
+    expect(postalCode.closest(".form-field")).toHaveClass("has-error");
+    expect(postalCode).toHaveAccessibleDescription(
+      "CEP inválido. Informe os 8 dígitos.",
+    );
+    expect(field("Logradouro")).toHaveValue("Rua Existente");
+    expect(field("Cidade")).toHaveValue("Campinas");
+    expect(field("Estado")).toHaveValue("SP");
+    expect(field("Número")).toHaveValue("42");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("mostra o erro devolvido pela consulta e preserva o endereço", async () => {
+    mockFetch((url) =>
+      url.startsWith("/api/cep")
+        ? jsonResponse(
+            { error: "CEP não encontrado. Confira o número informado." },
+            false,
+            404,
+          )
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+
+    fireEvent.change(field("Logradouro"), {
+      target: { value: "Rua Existente" },
+    });
+    fireEvent.change(field("Cidade"), { target: { value: "Campinas" } });
+
+    const postalCode = field("CEP");
+    fireEvent.change(postalCode, { target: { value: "99999999" } });
+    fireEvent.blur(postalCode);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("CEP não encontrado. Confira o número informado."),
+      ).toBeInTheDocument(),
+    );
+    expect(postalCode.closest(".form-field")).toHaveClass("has-error");
+    expect(field("Logradouro")).toHaveValue("Rua Existente");
+    expect(field("Cidade")).toHaveValue("Campinas");
+  });
+
+  it("informa falha de conexão e preserva o endereço", async () => {
+    mockFetch(() => Promise.reject(new Error("offline")));
+    render(<ClientForm />);
+
+    fireEvent.change(field("Estado"), { target: { value: "SP" } });
+    const postalCode = field("CEP");
+    fireEvent.change(postalCode, { target: { value: "01310100" } });
+    fireEvent.blur(postalCode);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Não foi possível consultar o CEP. Verifique sua conexão e tente novamente.",
+        ),
+      ).toBeInTheDocument(),
+    );
+    expect(postalCode.closest(".form-field")).toHaveClass("has-error");
+    expect(field("Estado")).toHaveValue("SP");
+  });
+
+  it("não consulta nem sinaliza erro quando o CEP está vazio", () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+
+    fireEvent.blur(field("CEP"));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(field("CEP").closest(".form-field")).not.toHaveClass("has-error");
+  });
+});
+
 describe("ClientForm — máscaras de CNPJ e CEP", () => {
   it("mascara CNPJ e CEP ao digitar e envia os valores mascarados", async () => {
     const fetchMock = mockFetch();
