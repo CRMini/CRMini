@@ -53,7 +53,7 @@ Cores literais estruturais que fazem parte do padrão e podem ser reutilizadas:
 - `#fafbf9`, `#fafcf9`, `#fcfdfb`, `#f5f7f4` — superfícies quase brancas do bloco de listagem/formulário.
 - `#fafbf9ef` — fundo translúcido de `.form-actions`.
 - `#3986531c` — anel de foco (accent a ~11%).
-- `#a33` — erro e ação destrutiva; `#fff2f2` e `#f0d0d0` — superfície e borda de erro.
+- `#a33` — erro e ação destrutiva; `#fff2f2` e `#f0d0d0` — superfície e borda de erro; `#aa33331f` — anel de foco de campo com erro.
 
 Em código novo, **PREFIRA tokens** (`var(--accent)`, `var(--line)`); use hex literal apenas quando repetir um valor já consagrado acima. NÃO introduza verde, cinza, sombra ou gradiente fora dessa lista.
 
@@ -204,6 +204,28 @@ Campo padrão:
 - Blocos repetidos (contatos) — `.contact-form-card` (borda `#e7ebe5`, raio `6px`, fundo `#fcfdfb`) com `.contact-form-title` e ação `subtle-button danger-link` para remover.
 - Observações — `.notes-input`.
 
+#### Problema em campo (padrão obrigatório)
+
+Sempre que um valor de campo for inválido, não puder ser obtido ou falhar em uma verificação (CEP, e-mail, data, busca externa), o campo DEVE seguir este padrão em qualquer tela:
+
+```tsx
+<div className="form-field has-error">
+  <label htmlFor="cep">CEP</label>
+  <input id="cep" aria-invalid="true" aria-describedby="cep-erro" />
+  <span id="cep-erro" className="form-field-error" role="alert">
+    CEP inválido. Informe os 8 dígitos.
+  </span>
+</div>
+```
+
+- `has-error` no `.form-field` deixa a borda do controle em `#a33`, inclusive no foco.
+- `.form-field-error` fica imediatamente abaixo do controle, em `11px`, `#a33`.
+- A mensagem DEVE dizer o que aconteceu e como corrigir, em português; NÃO use apenas ícone ou cor.
+- A falha NÃO DEVE limpar, substituir nem preencher os demais campos do formulário.
+- Associe o controle com `aria-invalid="true"` e `aria-describedby`; mensagens que surgem após interação usam `role="alert"`.
+- Valide ao sair do campo (`blur`) ou no envio, não a cada tecla, para não acusar erro enquanto a pessoa digita.
+- O mesmo comportamento vale para falha de autocompletar externo: preencha somente no sucesso e preserve o restante do formulário na falha.
+
 Ações:
 
 - `.form-actions` no rodapé do formulário: `sticky` no fundo, `background: #fafbf9ef`, `backdrop-filter: blur(8px)`, alinhado à direita.
@@ -234,7 +256,7 @@ Telas de detalhe e de preferências usam exatamente o mesmo esqueleto da seção
 
 - **Carregando:** texto curto com `role="status"`; nunca um spinner isolado sem texto.
 - **Vazio:** `.empty-state` com ação de saída (cadastrar, limpar filtros).
-- **Erro:** `.form-error`; para mensagens que aparecem após interação, adicione `role="alert"`. NÃO use `alert()` para erros de formulário.
+- **Erro:** `.form-error` para falhas do formulário como um todo; para problemas em um campo específico, use `.form-field.has-error` + `.form-field-error` (seção 8). Para mensagens que aparecem após interação, adicione `role="alert"`. NÃO use `alert()` para erros de formulário.
 - **Confirmação:** `window.confirm` é aceito para ações destrutivas (padrão atual em `clients-view.tsx`). `window.prompt` (motivo de perda em oportunidades) é legado: quando a tela tiver diálogo próprio, substitua-o; não o replique em telas novas.
 - **Sucesso:** redirecionar para a listagem com `router.push` + `router.refresh` é o padrão; confirmações inline são aceitáveis em telas que permanecem abertas.
 - **Datas:** instantes (`scheduled_at`, `created_at`, `updated_at`) são exibidos no fuso `America/Sao_Paulo`; datas civis (`birthday`, `opened_at`) são `YYYY-MM-DD` e NÃO DEVEM sofrer conversão de fuso.
@@ -300,6 +322,8 @@ Regras:
 | `form-section-heading`          | Título + descrição + ação da seção     | `src/app/globals.css`            | `client-form.tsx`                 |
 | `form-grid`                     | Grade de campos                        | `src/app/globals.css`            | `client-form.tsx`                 |
 | `form-field`                    | Rótulo + controle                      | `src/app/globals.css`            | `client-form.tsx`                 |
+| `form-field` + `has-error`      | Campo com problema de informação       | `src/app/globals.css`            | CEP inválido                      |
+| `form-field-error`              | Mensagem abaixo do campo com erro      | `src/app/globals.css`            | `CEP inválido...`                 |
 | `checkbox-field`                | Checkbox com rótulo                    | `src/app/globals.css`            | `client-form.tsx`                 |
 | `logo-upload` / `upload-button` | Upload de imagem                       | `src/app/globals.css`            | `client-form.tsx`                 |
 | `contact-form-card`             | Bloco repetido de contato              | `src/app/globals.css`            | `client-form.tsx`                 |
@@ -321,6 +345,8 @@ NÃO faça:
 - `style={{ color: "#..." }}` ou CSS local para “ajustar” espaçamento — corrija com as classes existentes.
 - Novos hex, sombras ou raios fora dos tokens.
 - `placeholder` como único rótulo, `div` clicável no lugar de `button`/`Link`, ícone sem nome acessível.
+- Criar um padrão próprio de erro em campo: use sempre `.form-field.has-error` + `.form-field-error`, com borda vermelha e mensagem textual abaixo.
+- Alterar outros campos de um formulário porque um campo específico falhou.
 - Reimplementar breadcrumb (`div` com texto) em vez de usar `Breadcrumbs`.
 - `alert()` para erro de formulário e `prompt()` como padrão de diálogo.
 - Duplicar blocos inteiros de CSS para uma tela; se precisar de variação, escopar por `main.records-page` ou por uma classe de bloco.
@@ -335,6 +361,7 @@ NÃO faça:
 - [ ] Listagem usa toolbar/filtros existentes, com contagem e estados de carregando/vazio/erro.
 - [ ] Formulário usa `form-section`, `form-grid`, `form-field`, `form-actions` e mensagens em `form-error`.
 - [ ] Campos têm rótulo visível, obrigatórios marcados e foco no padrão `--accent`.
+- [ ] Problemas em campo usam `.form-field.has-error` + `.form-field-error`, com mensagem textual e sem alterar os demais campos.
 - [ ] Layout funciona em `1100px`, `900px`, `680px` e `600px` sem overflow horizontal indevido.
 - [ ] Navegação por teclado, nomes acessíveis e `role="status"`/`role="alert"` conferidos.
 - [ ] Datas no fuso `America/Sao_Paulo`; datas civis sem conversão.

@@ -26,6 +26,7 @@
 - Datas civis (como aniversário e abertura de oportunidade) são `TEXT` no formato `YYYY-MM-DD`, não representam instantes e não devem sofrer conversão de fuso. Instantes (`created_at`, `updated_at`, `scheduled_at`) são `TEXT` ISO-8601 persistidos em UTC e apresentados na interface no fuso `America/Sao_Paulo`; preserve essa distinção.
 - Booleanos são `INTEGER` 0/1 no banco; valores monetários e horas são `TEXT` com decimal canônico (ex.: `"1234.56"`) para preservar a precisão decimal.
 - Não inclua dados pessoais reais em código, fixtures, logs ou testes. Evite expor dados desnecessários nas respostas das APIs.
+- Problemas em um campo de formulário (valor inválido, consulta externa sem resultado etc.) DEVEM seguir o padrão de `docs/padrao-visual.md`: borda vermelha no controle e mensagem textual em `.form-field-error` logo abaixo, sem alterar os outros campos.
 
 ## Banco de dados
 

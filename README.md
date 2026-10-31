@@ -152,6 +152,7 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/app/page.tsx`: visão geral do CRM.
 - `src/app/clientes`: lista, cadastro e edição de clientes e contatos.
 - `src/app/api/clients`: endpoints de cadastro, consulta, edição e exclusão.
+- `src/app/api/cep`: consulta de CEP no ViaCEP para autocompletar o endereço do cliente.
 - `src/app/oportunidades`: cadastro e acompanhamento de oportunidades.
 - `src/app/tarefas`: tarefas.
 - `src/lib/db.ts`: conexão SQLite única, com schema inicial, migrations e foreign keys habilitadas.
