@@ -1067,7 +1067,7 @@ describe("createUpdater: throttle e sanitização", () => {
     autoUpdater.emit(
       "error",
       new Error(
-        "Falha em https://github.com/feokuma/crminho/releases/download/v0.3.0/CRMini.exe (C:\\Users\\Ana\\AppData\\Local\\Temp\\x.yml) token=segredo123",
+        "Falha em https://github.com/CRMini/CRMini/releases/download/v0.3.0/CRMini.exe (C:\\Users\\Ana\\AppData\\Local\\Temp\\x.yml) token=segredo123",
       ),
     );
 

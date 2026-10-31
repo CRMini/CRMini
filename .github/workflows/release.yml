@@ -91,7 +91,8 @@ jobs:
 
       # Confere os metadados consumidos pelo electron-updater: sem `latest.yml`
       # com versão/hash, sem blockmap e sem `app-update.yml` apontando para o
-      # GitHub, o release é publicado mas nunca atualiza ninguém.
+      # GitHub, o release é publicado mas nunca atualiza ninguém. O `owner` e o
+      # `repo` de `app-update.yml` também precisam ser os de `build.publish`.
       - name: Validar metadados de atualização
         shell: pwsh
         run: |
@@ -123,10 +124,37 @@ jobs:
           }
 
           $appUpdateYml = "dist/win-unpacked/resources/app-update.yml"
+          $publish = (Get-Content package.json -Raw | ConvertFrom-Json).build.publish
+          # `build.publish` sem owner/repo geraria um `app-update.yml` sem feed:
+          # falha explícita em vez de passar sem comparar nada.
+          if ([string]::IsNullOrWhiteSpace($publish.owner)) {
+            $missing += "build.publish.owner no package.json"
+          }
+          if ([string]::IsNullOrWhiteSpace($publish.repo)) {
+            $missing += "build.publish.repo no package.json"
+          }
+
           if (-not (Test-Path -LiteralPath $appUpdateYml -PathType Leaf)) {
             $missing += $appUpdateYml
-          } elseif (-not (Get-Content -LiteralPath $appUpdateYml | Select-String -Pattern '^\s*provider:\s*["'']?github["'']?\s*$' -Quiet)) {
-            $missing += "$appUpdateYml com provider: github"
+          } else {
+            $appUpdateLines = Get-Content -LiteralPath $appUpdateYml
+            if (-not ($appUpdateLines | Select-String -Pattern '^\s*provider:\s*["'']?github["'']?\s*$' -Quiet)) {
+              $missing += "$appUpdateYml com provider: github"
+            }
+            # Compara owner/repo com o `package.json`: um feed de outro
+            # repositório publica o release mas não atualiza os clientes.
+            if (-not [string]::IsNullOrWhiteSpace($publish.owner)) {
+              $ownerPattern = '^\s*owner:\s*["'']?' + [regex]::Escape($publish.owner) + '["'']?\s*$'
+              if (-not ($appUpdateLines | Select-String -Pattern $ownerPattern -Quiet)) {
+                $missing += "$appUpdateYml com owner '$($publish.owner)'"
+              }
+            }
+            if (-not [string]::IsNullOrWhiteSpace($publish.repo)) {
+              $repoPattern = '^\s*repo:\s*["'']?' + [regex]::Escape($publish.repo) + '["'']?\s*$'
+              if (-not ($appUpdateLines | Select-String -Pattern $repoPattern -Quiet)) {
+                $missing += "$appUpdateYml com repo '$($publish.repo)'"
+              }
+            }
           }
 
           if ($missing.Count -gt 0) {

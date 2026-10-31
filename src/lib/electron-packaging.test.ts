@@ -359,7 +359,7 @@ describe("electron-builder: canal de atualização", () => {
     // precisa ser público para o cliente ler `latest.yml` sem token.
     expect(publish).toEqual({
       provider: "github",
-      owner: "feokuma",
+      owner: "CRMini",
       repo: "CRMini",
       releaseType: "release",
     });
@@ -421,6 +421,50 @@ describe("electron-builder: canal de atualização", () => {
       for (const asset of ["dist/latest.yml", "dist/*.blockmap"]) {
         expect(artifact).toContain(asset);
       }
+    });
+
+    describe("owner/repo do app-update.yml", () => {
+      const artifactIndex = workflow.indexOf(
+        "name: Disponibilizar executáveis",
+      );
+      const validation = workflow.slice(validationIndex, artifactIndex);
+
+      it("compara owner e repo do package.json com o app-update.yml", () => {
+        // O electron-builder gera `app-update.yml` a partir de
+        // `build.publish`; se os valores divergirem (repositório movido), o
+        // release publica mas os clientes procuram o feed no endereço antigo.
+        const publish = packageJson.build.publish as {
+          owner: string;
+          repo: string;
+        };
+
+        expect(validation).toContain("build.publish");
+
+        for (const field of ["owner", "repo"] as const) {
+          // O padrão é montado em tempo de execução e escapado: um valor fixo
+          // no workflow deixaria de acompanhar o `package.json`.
+          expect(validation).toContain(`[regex]::Escape($publish.${field})`);
+          expect(
+            validation
+              .split("\n")
+              .some((line) => line.includes(`^\\s*${field}:`)),
+          ).toBe(true);
+          expect(validation).toContain(`$appUpdateYml com ${field} `);
+        }
+
+        expect(validation).not.toContain(publish.owner);
+        expect(validation).not.toContain(publish.repo);
+      });
+
+      it("falha quando build.publish não define owner/repo", () => {
+        // Valor vazio não pode virar checagem vazia (regex que aceita tudo).
+        for (const field of ["owner", "repo"] as const) {
+          expect(validation).toContain(`IsNullOrWhiteSpace($publish.${field})`);
+          expect(validation).toContain(
+            `build.publish.${field} no package.json`,
+          );
+        }
+      });
     });
   });
 });

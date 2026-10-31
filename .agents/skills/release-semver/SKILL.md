@@ -81,7 +81,7 @@ Estrutura recomendada:
 
 - Número de testes e cobertura.
 
-**Full Changelog**: https://github.com/feokuma/CRMini/compare/vX.Y.Z-anterior...vX.Y.Z
+**Full Changelog**: https://github.com/CRMini/CRMini/compare/vX.Y.Z-anterior...vX.Y.Z
 ```
 
 Não invente impacto, número de issue ou mudança que não esteja no diff.

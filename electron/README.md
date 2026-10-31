@@ -71,7 +71,9 @@ A publicação é feita pelo workflow `.github/workflows/release.yml`, que ao en
 
 ## Atualização automática
 
-A partir da 0.2.0 o app instalado verifica novas versões no GitHub Releases. A dependência de produção é `electron-updater`. O feed vem do campo `build.publish` do `package.json` (`provider: github`, `owner: feokuma`, `repo: CRMini`, `releaseType: release`): o electron-builder gera `resources/app-update.yml` a partir dele e o código não chama `setFeedURL`. Por isso o repositório precisa ser **público** e cada release precisa publicar `latest.yml` e os `*.blockmap` — o workflow valida `latest.yml`, `app-update.yml` e os blockmaps antes de publicar.
+A partir da 0.2.0 o app instalado verifica novas versões no GitHub Releases. A dependência de produção é `electron-updater`. O feed vem do campo `build.publish` do `package.json` (`provider: github`, `owner: CRMini`, `repo: CRMini`, `releaseType: release`): o electron-builder gera `resources/app-update.yml` a partir dele e o código não chama `setFeedURL`. Por isso o repositório precisa ser **público** e cada release precisa publicar `latest.yml` e os `*.blockmap` — o workflow valida `latest.yml` (versão e hash), `app-update.yml` (`provider: github` com `owner` e `repo` iguais aos de `build.publish`) e os blockmaps antes de publicar.
+
+Instalações anteriores à mudança de endereço do repositório leem o `app-update.yml` gravado no próprio pacote e continuam apontando para o endereço antigo; elas dependem do redirect do GitHub até serem atualizadas para uma versão gerada com o endereço novo.
 
 A primeira checagem acontece cerca de 10 s após abrir o app e depois a cada 4 h (`electron/updater.cjs`). Checagens automáticas respeitam um intervalo mínimo de 30 min, persistido em `userData/updater.json`, e recebem jitter de ±10%; falhas entram em backoff de 15 min → 30 min → 1 h → 6 h. Como o intervalo mínimo de 30 min prevalece sobre o primeiro degrau do backoff, a primeira nova tentativa após uma falha ocorre em 30 min, e não em 15 min. Falha de checagem é silenciosa para o usuário (só log no processo principal); falha de download ou de instalação aparece no chip.
 
