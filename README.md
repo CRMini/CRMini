@@ -1,18 +1,31 @@
 # CRMini
 
-Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades e tarefas. Os dados são persistidos em um arquivo SQLite local; a interface permite acompanhar informações e atividades comerciais em um só lugar.
+Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades e tarefas. Os dados são persistidos em um arquivo SQLite local; a interface permite acompanhar informações e atividades comerciais em um só lugar. O mesmo código roda no navegador (`npm run dev`) e em uma janela desktop com Electron.
+
+## Funcionalidades
+
+- **Visão geral:** métricas de contatos e oportunidades, oportunidades recentes e saudação com o nome configurado pelo usuário.
+- **Clientes:** listagem, cadastro, edição, logo e desativação. Cada cliente pode ter vários contatos, exibidos no cadastro do cliente.
+- **Contatos:** listagem com filtros, cadastro, edição, ativação/desativação e associação ao cliente.
+- **Oportunidades:** cadastro, acompanhamento por status, motivo de perda, valores, moedas e horas de projeto.
+- **Tarefas:** cadastro, filtros por dia/status e alteração entre `Aberto` e `Concluído`.
+- **Configurações:** nome do usuário (usado nas saudações) e, no aplicativo desktop, caminho do banco e pasta de imagens.
+- **Aplicativo desktop:** splash de inicialização, barra lateral recolhível e atualização automática pelo GitHub Releases no app instalado.
+- **Formulários:** autocomplete de endereço por CEP (ViaCEP) e máscaras de CNPJ, CEP e telefone.
 
 ## Tecnologias
 
 - Next.js 15 e React 19
 - TypeScript 5
-- SQLite 3, acessado pela biblioteca `better-sqlite3` (arquivo local, sem servidor)
-- ESLint 9 para análise estática
-- Vitest + React Testing Library para testes automatizados de lógica e componentes React
+- SQLite 3, acessado pela biblioteca `better-sqlite3` 13 (arquivo local, WAL e foreign keys)
+- Electron 44, `electron-builder` 26 e `electron-updater` 6 para o aplicativo desktop
+- ESLint 9 e Prettier 3 para análise estática e formatação
+- Vitest 5 + React Testing Library/jsdom para testes automatizados de lógica e componentes React
 
 ## Requisitos
 
-- Node.js 20.9 ou superior e npm
+- Node.js **22.12 ou superior** e npm. Essa versão é exigida pelo Electron 44 e pelo Vitest 5.
+- Para gerar os instaladores do Windows, o build precisa rodar em uma máquina Windows (veja [Distribuição](#distribuição-github-releases)).
 
 ## Configuração e execução local
 
@@ -22,7 +35,10 @@ Na raiz do repositório, instale as dependências:
 npm install
 ```
 
-Opcionalmente copie `.env.example` para `.env.local` para definir `SQLITE_PATH`. Sem override, o banco fica em `$XDG_DATA_HOME/crminho/crm.sqlite` ou `~/.local/share/crminho/crm.sqlite` no Linux.
+Opcionalmente copie `.env.example` para `.env.local`. O Next.js e os scripts de banco (`db:seed` e `db:migrate`) leem esse arquivo. As variáveis disponíveis são:
+
+- `SQLITE_PATH`: caminho do arquivo SQLite. Sem override, o banco fica em `$XDG_DATA_HOME/CRMini/crm.sqlite` ou `~/.local/share/CRMini/crm.sqlite` no Linux; `~/Library/Application Support/CRMini/crm.sqlite` no macOS; `%APPDATA%\CRMini\crm.sqlite` no Windows.
+- `CRM_ASSETS_DIR`: pasta dos logos no modo web. Sem override, usa `./tmp/assets`. No aplicativo desktop o Electron define essa variável sozinho, junto do banco.
 
 Inicie a aplicação:
 
@@ -48,11 +64,11 @@ Para executar a versão de produção dentro do Electron:
 npm run desktop
 ```
 
-O comando `npm run desktop` executa `desktop:build` (equivalente a `npm run build && npm run prepare:standalone`) e, em seguida, inicia o Electron servindo o build standalone (`.next/standalone/server.js`). Ele sempre gera o build antes de abrir a janela. Alterações no código do Electron exigem reiniciar o aplicativo. Veja também [electron/README.md](./electron/README.md).
+O comando `npm run desktop` executa `desktop:build` (equivalente a `npm run build && npm run prepare:standalone`) e, em seguida, `check:electron-abi` e o Electron servindo o build standalone (`.next/standalone/server.js`). Ele sempre gera o build antes de abrir a janela. Alterações no código do Electron exigem reiniciar o aplicativo. Veja também [electron/README.md](./electron/README.md).
 
 O servidor standalone roda sob `ELECTRON_RUN_AS_NODE`. O `better-sqlite3` 13 usa prebuilds N-API (`prebuilds/<plataforma>-<arch>.node`), compatíveis com Node e Electron, então não é preciso reconstruir o módulo para cada runtime. O comando `npm run desktop` executa `npm run check:electron-abi` antes de abrir a janela e falha com uma mensagem explícita se o prebuild da plataforma não carregar.
 
-A preferência de barra lateral recolhida/expandida é salva em `userData/preferences.json` no Electron e em `localStorage` (`crmini.sidebar.collapsed`) no navegador.
+A preferência de barra lateral recolhida/expandida é salva em `userData/preferences.json` no Electron e em `localStorage` (`crmini.sidebar.collapsed`) no navegador. A splash de inicialização permanece visível enquanto o banco/migrations e o servidor Next.js são preparados.
 
 ## Distribuição (GitHub Releases)
 
@@ -66,34 +82,44 @@ Para publicar uma versão:
 
 O critério de escolha do número (SemVer e a política para versões `0.x`) e o checklist completo estão em [`.agents/skills/release-semver/SKILL.md`](./.agents/skills/release-semver/SKILL.md). O workflow falha se a versão da tag (sem o `v`) não for idêntica à `version` do `package.json`. Ele também pode ser executado manualmente (`workflow_dispatch`): nesse caso o build e o empacotamento rodam, mas nenhuma release é publicada; os `.exe` gerados ficam disponíveis no artefato `crmini-windows` da execução (retenção de 7 dias).
 
-Cada execução disparada por tag anexa dois artefatos:
+Cada execução disparada por tag publica os dois instaladores e os metadados de atualização (`latest.yml` e `*.blockmap`):
 
 - `CRMini-<versão>-setup.exe`: instalador NSIS por usuário, sem exigir administrador, com atalhos no menu Iniciar e na área de trabalho e desinstalador registrado. Desinstalar não apaga o banco, as preferências nem os logos do usuário.
 - `CRMini-<versão>-portable.exe`: executa sem instalar, mas continua gravando os dados no diretório do usuário.
+- `latest.yml` e `*.blockmap`: consumidos pelo `electron-updater` para oferecer a atualização automática.
 
 O build precisa rodar no Windows: o `better-sqlite3` carrega um binário nativo por plataforma/arquitetura (`prebuilds/win32-x64.node`), então um pacote gerado em Linux não serve para Windows. Para gerar localmente em uma máquina Windows, use `npm run package:win` (instaladores em `dist/`) ou `npm run package:dir` (apenas o diretório `dist/win-unpacked`, útil para inspeção).
 
 A partir da 0.2.0 o app instalado se atualiza pelo próprio GitHub Releases: o `electron-updater` lê o feed gerado a partir de `build.publish`, então o repositório precisa ser **público** e cada release precisa publicar `latest.yml` e os `*.blockmap` (o workflow valida esses arquivos antes de publicar). A checagem roda em segundo plano e o download só começa quando o usuário aceita; o `portable.exe` e o `npm run dev` não se atualizam. Para desligar a checagem no app instalado, defina `CRM_DISABLE_UPDATES=1`. O comportamento completo está em [electron/README.md](./electron/README.md).
 
+As notas da release são geradas automaticamente a partir dos commits (`generate_release_notes`), mas podem vir apenas com o link do changelog. O checklist em [`.agents/skills/release-semver/SKILL.md`](./.agents/skills/release-semver/SKILL.md) orienta revisar e, se necessário, preencher a descrição em português.
+
 Os binários **não são assinados**: o SmartScreen pode exibir o aviso "O Windows protegeu o seu PC" na primeira execução, e a liberação exige "Mais informações → Executar assim mesmo". A assinatura de código continua fora do fluxo; a atualização automática existe a partir da 0.2.0 e o aviso do SmartScreen também aparece nas atualizações. O plano técnico completo está em [docs/empacotamento-windows.md](./docs/empacotamento-windows.md).
 
 ## Banco de dados e migrations
 
-O banco é um arquivo SQLite local no diretório de dados do usuário (configurável por `SQLITE_PATH`). Na abertura, as migrations pendentes de `database/migrations` são executadas automaticamente em ordem e, em seguida, o schema de `database/init.sql` é reaplicado de forma idempotente (em banco novo, o `init.sql` cria tudo e as migrations históricas entram apenas no registro). No Electron, a escolha do banco ocorre apenas na primeira inicialização e fica salva nas preferências do usuário; as migrations rodam antes de iniciar o Next.js, e uma falha impede a abertura da janela. Use Configurações para escolher outro banco; o app reinicia para abrir o novo caminho, sem mover ou apagar o anterior. Se o caminho salvo não estiver disponível ou for inválido, o app informa o problema e oferece seletor explícito de recuperação; cancelar encerra o app preservando a preferência e sem criar banco vazio.
+O banco é um arquivo SQLite local no diretório de dados do usuário (configurável por `SQLITE_PATH`). No Electron, o banco padrão fica em `app.getPath("userData")/crm.sqlite`: `%APPDATA%\CRMini` no Windows, `~/.config/CRMini` no Linux e `~/Library/Application Support/CRMini` no macOS. A escolha de outro banco é feita em Configurações e fica salva nas preferências do usuário; o app reinicia para abrir o novo caminho, sem mover ou apagar o anterior. Se o caminho salvo não estiver disponível ou for inválido, o app informa o problema e oferece seletor explícito de recuperação; cancelar encerra o app preservando a preferência e sem criar banco vazio.
 
-Os logos enviados ficam em `assets/` na mesma pasta do banco em uso (Configurações exibe o caminho). Para backup ou para levar o CRM a outro computador, copie o arquivo `<pasta>/crm.sqlite` (encerre o app antes) junto da pasta `<pasta>/assets/`; copiar só o banco deixa as imagens para trás.
+Na abertura, as migrations pendentes de `database/migrations` são executadas automaticamente em ordem e, em seguida, o schema de `database/init.sql` é reaplicado de forma idempotente (em banco novo, o `init.sql` cria tudo e as migrations históricas entram apenas no registro). No Electron, as migrations rodam antes de iniciar o Next.js, e uma falha impede a abertura da janela. A CLI também está disponível:
 
-A pasta de dados do aplicativo desktop é `%APPDATA%\CRMini` (`~/.config/CRMini` no Linux).
+```bash
+npm run db:migrate
+npm run db:migrate -- /tmp/banco.sqlite
+```
 
-Para inserir os dados de demonstração (três empresas, seus contatos e oportunidades de exemplo), execute:
+Antes de aplicar migrations pendentes, o runner cria uma cópia de segurança `<caminho-do-banco>.bak-<AAAAMMDDhhmmss>`; bancos criados por uma versão mais nova do CRM, com migrations desconhecidas, são recusados sem alteração. O formato append-only e as regras de `init.sql` estão em [database/migrations/README.md](./database/migrations/README.md).
+
+No desktop, os logos ficam em `assets/` na mesma pasta do banco em uso (Configurações exibe o caminho). Para backup ou para levar o CRM a outro computador, encerre o app e copie o arquivo do banco (por exemplo, `<pasta>/crm.sqlite`) junto da pasta `<pasta>/assets/`; copiar só o banco deixa as imagens para trás. No modo web, os logos ficam em `CRM_ASSETS_DIR` ou, sem override, em `tmp/assets`, um armazenamento provisório não versionado.
+
+Para descartar completamente o banco em uso e recriá-lo do zero, encerre o app e apague o arquivo indicado em Configurações no desktop (ou o caminho de `SQLITE_PATH`/padrão no modo web), junto dos arquivos `-wal` e `-shm` ao lado dele. Isso apaga todos os dados.
+
+Para inserir os dados de demonstração (três empresas, seis contatos e três oportunidades), execute:
 
 ```bash
 npm run db:seed
 ```
 
-O seed pode ser executado novamente sem duplicar esses registros.
-
-Alterações de schema para bancos já existentes são migrations append-only em `database/migrations`, aplicadas automaticamente em ordem numérica na abertura do banco e também por `npm run db:migrate` (com caminho opcional: `npm run db:migrate -- /tmp/banco.sqlite`). Antes de aplicar migrations pendentes, o runner cria uma cópia de segurança `<caminho-do-banco>.bak-<AAAAMMDDhhmmss>`; bancos criados por uma versão mais nova do CRM, com migrations desconhecidas, são recusados sem alteração. Veja `database/migrations/README.md`. Para descartar completamente o banco local e recriá-lo do zero, apague o arquivo `database/crm.sqlite` — isso apaga todos os dados.
+O seed pode ser executado novamente sem duplicar esses registros; ele usa `ON CONFLICT (id) DO UPDATE` e atualiza os registros de demonstração.
 
 ### Convenções de dados
 
@@ -114,26 +140,33 @@ npm test
 
 Os testes ficam próximos aos módulos em `src/` e são descobertos por `src/**/*.test.{ts,tsx}`. `npm run test:components` também executa a suíte Vitest completa. Os testes de repositório usam um banco SQLite em memória, isolado do banco local.
 
-Para medir a cobertura (Vitest + V8, relatório em texto e HTML em `coverage/`):
+Para medir a cobertura (Vitest + V8, relatório em texto, HTML e JSON-summary em `coverage/`):
 
 ```bash
 npm run coverage
 ```
 
-O comando aplica os pisos mínimos configurados em `vitest.config.mts` (statements 80, branches 82, functions 72, lines 81) e falha se a cobertura ficar abaixo deles. Ao adicionar testes que elevem a cobertura de forma sustentada, atualize os pisos no mesmo commit.
+A cobertura inclui `src/**/*.{ts,tsx}`, `electron/**/*.cjs` e `scripts/**/*.cjs`. O comando aplica os pisos mínimos configurados em `vitest.config.mts` (statements 80, branches 82, functions 72, lines 81) e falha se a cobertura ficar abaixo deles. Ao adicionar testes que elevem a cobertura de forma sustentada, atualize os pisos no mesmo commit.
 
-Para verificar o lint e gerar a versão de produção:
+Para verificar lint, formatação e gerar a versão de produção:
 
 ```bash
 npm run lint
+npm run format:check
 npm run build
 ```
 
-Depois do build, a versão de produção pode ser iniciada com `npm run start`.
+Use `npm run format` para aplicar o Prettier. O build usa `output: "standalone"`; por isso `npm run start` não é compatível com essa configuração. Para pré-visualizar a versão de produção no navegador, gere o standalone e execute o servidor diretamente:
+
+```bash
+npm run build
+npm run prepare:standalone
+node .next/standalone/server.js
+```
 
 ## Verificação de responsividade
 
-A checagem de responsividade é manual e opcional: abre cada rota no Chromium do Electron em modo headless, redimensiona a janela e reporta overflow de página e conteúdo cortado nas listagens (`.contact-row-actions` e `.task-status`). Ela precisa de um servidor da aplicação rodando em paralelo — inicie `npm run dev` em outro terminal — e não faz parte de `npm test`. O Chromium usado é o do Electron, então as dependências de desenvolvimento precisam estar instaladas:
+A checagem de responsividade é manual e opcional: abre cada rota no Chromium do Electron em modo headless, redimensiona a janela e reporta overflow de página e conteúdo cortado nas listagens (`.contact-row-actions` e `.task-status`). Ela percorre 10 rotas (incluindo `/configuracoes` e as telas de cadastro) em 21 larguras, de 320 a 1440 px, com as transições dos breakpoints 600/601, 680/681 e 900/901. Precisa de um servidor da aplicação rodando em paralelo — inicie `npm run dev` em outro terminal — e não faz parte de `npm test`. O Chromium usado é o do Electron, então as dependências de desenvolvimento precisam estar instaladas:
 
 ```bash
 npm run layout:check
@@ -149,20 +182,36 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 
 ## Estrutura
 
-- `src/app/page.tsx`: visão geral do CRM.
-- `src/app/clientes`: lista, cadastro e edição de clientes e contatos.
-- `src/app/api/clients`: endpoints de cadastro, consulta, edição e exclusão.
+- `src/app/page.tsx`: visão geral do CRM, com métricas, oportunidades recentes e saudação.
+- `src/app/clientes`: lista, cadastro e edição de clientes; o cadastro do cliente também gerencia os contatos vinculados.
+- `src/app/contatos`: lista, cadastro e edição de contatos, com ativação/desativação e filtros.
+- `src/app/oportunidades`: lista, cadastro e acompanhamento de oportunidades.
+- `src/app/tarefas`: lista, cadastro e alteração de status das tarefas.
+- `src/app/configuracoes`: nome do usuário e, no desktop, caminho do banco e pasta de imagens.
+- `src/app/api/clients`: endpoints de cadastro, consulta, edição e desativação de clientes.
+- `src/app/api/contacts`: endpoints de contatos, incluindo consulta, edição e `PATCH` de ativação/desativação.
+- `src/app/api/opportunities`: endpoints de oportunidades, incluindo alteração de status e motivo de perda.
+- `src/app/api/tasks`: endpoints de tarefas, incluindo criação e alteração de status.
+- `src/app/api/settings`: leitura e gravação do nome do usuário em `app_settings`.
+- `src/app/api/logo`: upload e leitura dos logos dos clientes.
 - `src/app/api/cep`: consulta de CEP no ViaCEP para autocompletar o endereço do cliente.
-- `src/app/oportunidades`: cadastro e acompanhamento de oportunidades.
-- `src/app/tarefas`: tarefas.
+- `src/components`: componentes compartilhados (barra lateral, breadcrumbs, listagens, formulários e chip de atualização).
 - `src/lib/db.ts`: conexão SQLite única, com schema inicial, migrations e foreign keys habilitadas.
+- `src/lib/repositories`: acesso ao banco para clientes, contatos, oportunidades, tarefas e configurações.
+- `src/lib`: regras e utilitários de domínio (máscaras, CEP, telefone, datas, horas de projeto, métricas do painel, preferência da sidebar e caminhos de logos).
+- `electron/`: processo principal, preload, splash, seleção de banco, migrations, servidor Next e atualização automática. Veja `electron/README.md`.
+- `scripts/`: preparação do standalone, verificação do ABI do `better-sqlite3` e checagem de responsividade.
 - `database/init.sql`: schema SQLite para bancos novos.
 - `database/migrate.cjs`: runner que aplica o schema, registra/aplica migrations e gera backup antes de alterar bancos existentes.
 - `database/migrations`: migrations SQL append-only para bancos existentes.
 - `database/seed.sql` e `database/seed.mjs`: clientes, contatos e oportunidades de demonstração.
-- `tmp/assets`: logos enviados no modo web (`npm run dev`); no desktop, ficam em `assets/` ao lado do banco. Não versionado.
-- `src/app/globals.css`: estilos responsivos da aplicação.
+- `database/sqlite-paths.cjs`: resolução do banco padrão, validação de arquivos do CRM e migração do banco legado.
 - `docs/padrao-visual.md`: padrão visual obrigatório para criação e ajuste de telas.
-- `src/app/layout.tsx`: layout raiz e metadados.
+- `docs/empacotamento-windows.md`: plano técnico do empacotamento Windows.
+- `docs/plano-assets-do-banco.md`: decisões sobre a pasta de imagens acompanhar o banco.
+- `public/brand`: logos e favicon usados pela aplicação; `public/company-logos`: logos de demonstração.
+- `assets/brand`: ícones por plataforma organizados a partir do Brand Kit (não integrados ao empacotamento atual; o instalador usa `public/brand/crmini-favicon.ico`).
+- `src/app/globals.css`: estilos responsivos da aplicação.
+- `src/app/layout.tsx`: layout raiz, metadados e montagem da barra lateral e do chip de atualização.
 
-Clientes não são excluídos pela aplicação: a ação disponível os desativa e preserva o histórico. A duração de projeto é persistida em horas (8 por dia, 40 por semana e 160 por mês). Datas e horários seguem o padrão brasileiro na interface e o fuso `America/Sao_Paulo`; instantes são armazenados em UTC, enquanto campos de data civil permanecem sem conversão de fuso. Logos aceitam PNG, JPG ou WebP até 2 MB; no desktop eles são gravados em `assets/` junto do banco escolhido e, sem o app desktop, em `tmp/assets`, um armazenamento provisório não versionado.
+Clientes não são excluídos pela aplicação: a ação disponível os desativa e preserva o histórico. Contatos também são desativados em vez de removidos, podendo ser reativados. A duração de projeto é persistida em horas (8 por dia, 40 por semana e 160 por mês). Datas e horários seguem o padrão brasileiro na interface e o fuso `America/Sao_Paulo`; instantes são armazenados em UTC, enquanto campos de data civil permanecem sem conversão de fuso. Logos aceitam PNG, JPG ou WebP até 2 MB; no desktop eles são gravados em `assets/` junto do banco escolhido e, sem o app desktop, em `CRM_ASSETS_DIR` ou `tmp/assets`.
