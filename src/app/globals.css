@@ -913,6 +913,10 @@ td {
   padding: 10px;
   font-size: 12px;
 }
+.form-field-error {
+  color: #a33;
+  font: 11px/1.4 "DM Sans", sans-serif;
+}
 .primary-button:disabled {
   opacity: 0.65;
   cursor: wait;
@@ -1070,6 +1074,18 @@ main.records-page .form-field textarea:focus,
   border-color: var(--accent);
   box-shadow: 0 0 0 3px #3986531c;
   outline: 0;
+}
+/* Estado de erro em campo de formulário: borda vermelha e mensagem abaixo. */
+main.records-page .form-field.has-error input,
+main.records-page .form-field.has-error select,
+main.records-page .form-field.has-error textarea {
+  border-color: #a33;
+}
+main.records-page .form-field.has-error input:focus,
+main.records-page .form-field.has-error select:focus,
+main.records-page .form-field.has-error textarea:focus {
+  border-color: #a33;
+  box-shadow: 0 0 0 3px #aa33331f;
 }
 main.records-page .form-section-heading {
   gap: 16px;

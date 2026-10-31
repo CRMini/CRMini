@@ -131,6 +131,23 @@ describe("Estilos do formulário de cadastro", () => {
     ).toContain("min-width: 176px");
   });
 
+  it("sinaliza problema em campo com borda vermelha e mensagem abaixo", () => {
+    const invalidControl = ruleBlock(
+      "main.records-page .form-field.has-error input",
+    );
+    expect(invalidControl).toContain("border-color: #a33");
+
+    const invalidFocus = ruleBlock(
+      "main.records-page .form-field.has-error input:focus",
+    );
+    expect(invalidFocus).toContain("border-color: #a33");
+    expect(invalidFocus).toContain("box-shadow");
+
+    const message = ruleBlock(".form-field-error {");
+    expect(message).toContain("color: #a33");
+    expect(message).toContain('font: 11px/1.4 "DM Sans", sans-serif');
+  });
+
   it("mantém o checkbox de contato principal alinhado ao rótulo", () => {
     const wrapper = ruleBlock("main.records-page .contact-primary-checkbox {");
     expect(wrapper).toContain("display: inline-flex");
