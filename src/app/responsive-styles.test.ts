@@ -454,6 +454,12 @@ describe("Responsividade dos estilos globais", () => {
     if (!actions) return;
     expect(value(actions.body, "position")).toBe("relative");
     expect(value(actions.body, "z-index")).toBe("2");
+
+    const header = topBlocks.find((block) =>
+      block.prelude.includes(".opportunity-table-header > span:last-child"),
+    );
+    expect(header, "cabeçalho de ações sem alinhamento").toBeDefined();
+    if (header) expect(value(header.body, "text-align")).toBe("right");
   });
 
   it("sobrepõe o link na linha do cliente e mantém as ações acima", () => {

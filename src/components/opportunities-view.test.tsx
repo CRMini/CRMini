@@ -98,7 +98,7 @@ describe("Lista de oportunidades", () => {
       screen.getByRole("link", { name: "Ver detalhes de Projeto Exemplo" }),
     ).toHaveAttribute("href", "/oportunidades/opportunity-1");
     expect(
-      screen.getByRole("link", { name: "Editar →" }),
+      screen.getByRole("link", { name: "Editar" }),
     ).toHaveAttribute("href", "/oportunidades/opportunity-1/editar");
     expect(screen.getByText("1 oportunidade(s)")).toBeInTheDocument();
     expect(

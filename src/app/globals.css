@@ -2854,3 +2854,11 @@ main.records-page .opportunity-detail-actions {
     width: 100%;
   }
 }
+.opportunity-table-header > span:last-child {
+  text-align: right;
+}
+@media (max-width: 600px) {
+  .opportunity-table-row .opportunity-row-actions {
+    justify-content: flex-start;
+  }
+}

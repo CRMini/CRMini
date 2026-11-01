@@ -641,7 +641,7 @@ export default function OpportunitiesView({
                       className="text-link"
                       href={`/oportunidades/${o.id}/editar`}
                     >
-                      Editar →
+                      Editar
                     </Link>
                   </span>
                 </article>
