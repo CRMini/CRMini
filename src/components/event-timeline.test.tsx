@@ -301,4 +301,52 @@ describe("EventTimeline — formulário", () => {
     expect(await screen.findByText("Falha ao registrar.")).toBeInTheDocument();
     expect(title).toHaveValue("Conversa");
   });
+
+  it("consulta e registra eventos vinculados a uma oportunidade", async () => {
+    let posted: Record<string, unknown> | null = null;
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === "/api/events?opportunity_id=opp-1") return jsonResponse([]);
+        if (url === "/api/events" && init?.method === "POST") {
+          posted = JSON.parse(init.body as string);
+          return jsonResponse({ id: "event-new" });
+        }
+        return jsonResponse([]);
+      });
+
+    render(
+      <EventTimeline
+        clientId="client-1"
+        opportunityId="opp-1"
+        lockOpportunity
+        contacts={contacts}
+      />,
+    );
+
+    await screen.findByRole("heading", { name: "Nenhum evento registrado" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/events?opportunity_id=opp-1");
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).startsWith("/api/opportunities"),
+      ),
+    ).toBe(false);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "＋ Registrar evento" }),
+    );
+    expect(screen.queryByLabelText("Oportunidade")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("textbox", { name: /Título/ }), {
+      target: { value: "Reunião de acompanhamento" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar evento" }));
+
+    await waitFor(() => expect(posted).not.toBeNull());
+    expect(posted).toMatchObject({
+      client_id: "client-1",
+      opportunity_id: "opp-1",
+    });
+  });
 });

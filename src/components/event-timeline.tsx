@@ -44,10 +44,14 @@ const emptyForm = () => ({
 
 export default function EventTimeline({
   clientId,
-  contacts,
+  contacts = [],
+  opportunityId,
+  lockOpportunity = false,
 }: {
   clientId: string;
-  contacts: ContactOption[];
+  contacts?: ContactOption[];
+  opportunityId?: string;
+  lockOpportunity?: boolean;
 }) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [opportunities, setOpportunities] = useState<OpportunityOption[]>([]);
@@ -69,7 +73,9 @@ export default function EventTimeline({
     setError("");
 
     try {
-      const params = new URLSearchParams({ client_id: clientId });
+      const params = opportunityId
+        ? new URLSearchParams({ opportunity_id: opportunityId })
+        : new URLSearchParams({ client_id: clientId });
       if (filter) params.set("type", filter);
       const response = await fetch(`/api/events?${params.toString()}`);
       const result = await response.json();
@@ -92,10 +98,12 @@ export default function EventTimeline({
 
   useEffect(() => {
     load(typeFilter);
-    // A lista é refeita quando o cliente ou o filtro de tipo muda.
-  }, [clientId, typeFilter]);
+    // A lista é refeita quando o cliente, a oportunidade ou o filtro muda.
+  }, [clientId, opportunityId, typeFilter]);
 
   useEffect(() => {
+    if (lockOpportunity) return;
+
     let cancelled = false;
 
     fetch(`/api/opportunities?client_id=${encodeURIComponent(clientId)}`)
@@ -111,7 +119,7 @@ export default function EventTimeline({
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
+  }, [clientId, lockOpportunity]);
 
   function updateForm(key: keyof ReturnType<typeof emptyForm>, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -146,7 +154,9 @@ export default function EventTimeline({
           title: form.title,
           details: form.details,
           occurred_at: form.occurred_at,
-          opportunity_id: form.opportunity_id || null,
+          opportunity_id: lockOpportunity
+            ? opportunityId ?? null
+            : form.opportunity_id || null,
           contact_id: form.contact_id || null,
         }),
       });
@@ -256,22 +266,24 @@ export default function EventTimeline({
               error={fieldErrors.occurred_at}
               onChange={(value) => updateForm("occurred_at", value)}
             />
-            <label className="form-field">
-              <span>Oportunidade</span>
-              <select
-                value={form.opportunity_id}
-                onChange={(event) =>
-                  updateForm("opportunity_id", event.target.value)
-                }
-              >
-                <option value="">— sem oportunidade —</option>
-                {opportunities.map((opportunity) => (
-                  <option key={opportunity.id} value={opportunity.id}>
-                    {opportunity.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!lockOpportunity && (
+              <label className="form-field">
+                <span>Oportunidade</span>
+                <select
+                  value={form.opportunity_id}
+                  onChange={(event) =>
+                    updateForm("opportunity_id", event.target.value)
+                  }
+                >
+                  <option value="">— sem oportunidade —</option>
+                  {opportunities.map((opportunity) => (
+                    <option key={opportunity.id} value={opportunity.id}>
+                      {opportunity.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="form-field">
               <span>Contato</span>
               <select
