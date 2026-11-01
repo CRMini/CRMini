@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, listClients } from "@/lib/repositories/clients";
+import { createClient, listClients, listClientOptions } from "@/lib/repositories/clients";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
+    const compact = ["1", "true"].includes(
+      request.nextUrl.searchParams.get("compact") || "",
+    );
+    if (compact) {
+      const includeInactive = ["1", "true"].includes(
+        request.nextUrl.searchParams.get("include_inactive") || "",
+      );
+      return NextResponse.json(await listClientOptions(includeInactive));
+    }
     const search = request.nextUrl.searchParams.get("q")?.trim();
     return NextResponse.json(await listClients(search || null));
   } catch (error) {

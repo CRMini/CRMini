@@ -9,6 +9,7 @@ import {
   createClient,
   deactivateClient,
   getClient,
+  listClientOptions,
   listClients,
   updateClient,
 } from "./clients";
@@ -347,6 +348,25 @@ describe("updateClient", () => {
     const { client: stored } = await getClient(client.id);
     expect(stored!.company_name).toBe("Empresa Exemplo Ltda.");
     expect(stored!.contacts).toHaveLength(2);
+  });
+});
+
+describe("listClientOptions", () => {
+  it("lista apenas ativos por padrão e inclui inativos quando solicitado", async () => {
+    const active = await createClient({ company_name: "Ativa Ltda." });
+    const inactive = await createClient({ company_name: "Inativa Ltda." });
+    await deactivateClient(inactive.id);
+
+    const onlyActive = await listClientOptions();
+    expect(onlyActive).toEqual([
+      { id: active.id, company_name: "Ativa Ltda.", trade_name: null, is_active: true },
+    ]);
+
+    const all = await listClientOptions(true);
+    expect(all).toEqual([
+      { id: active.id, company_name: "Ativa Ltda.", trade_name: null, is_active: true },
+      { id: inactive.id, company_name: "Inativa Ltda.", trade_name: null, is_active: false },
+    ]);
   });
 });
 

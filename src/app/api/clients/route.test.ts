@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { listClients, createClient } = vi.hoisted(() => ({
+const { listClients, createClient, listClientOptions } = vi.hoisted(() => ({
   listClients: vi.fn(),
   createClient: vi.fn(),
+  listClientOptions: vi.fn(),
 }));
 
-vi.mock("@/lib/repositories/clients", () => ({ listClients, createClient }));
+vi.mock("@/lib/repositories/clients", () => ({ listClients, createClient, listClientOptions }));
 
 import { GET, POST } from "./route";
 
@@ -33,6 +34,7 @@ function rawPostRequest(body: string) {
 describe("GET /api/clients", () => {
   beforeEach(() => {
     listClients.mockReset();
+    listClientOptions.mockReset();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -78,6 +80,55 @@ describe("GET /api/clients", () => {
       error: "Não foi possível carregar os clientes.",
     });
     expect(console.error).toHaveBeenCalled();
+  });
+
+  it("retorna opções compactas com compact=1", async () => {
+    listClientOptions.mockResolvedValue([
+      { id: "client-1", company_name: "Empresa", trade_name: null, is_active: true },
+    ]);
+
+    const response = await GET(getRequest("?compact=1"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([
+      { id: "client-1", company_name: "Empresa", trade_name: null, is_active: true },
+    ]);
+    expect(listClientOptions).toHaveBeenCalledWith(false);
+    expect(listClients).not.toHaveBeenCalled();
+  });
+
+  it("retorna opções compactas com compact=true", async () => {
+    listClientOptions.mockResolvedValue([]);
+
+    const response = await GET(getRequest("?compact=true"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([]);
+    expect(listClientOptions).toHaveBeenCalledWith(false);
+    expect(listClients).not.toHaveBeenCalled();
+  });
+
+  it("inclui clientes inativos quando compact=1&include_inactive=1", async () => {
+    listClientOptions.mockResolvedValue([
+      { id: "client-1", company_name: "Ativa", trade_name: null, is_active: true },
+      { id: "client-2", company_name: "Inativa", trade_name: null, is_active: false },
+    ]);
+
+    const response = await GET(getRequest("?compact=1&include_inactive=1"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toHaveLength(2);
+    expect(listClientOptions).toHaveBeenCalledWith(true);
+  });
+
+  it("ignora compact com valor não reconhecido e segue a listagem normal", async () => {
+    listClients.mockResolvedValue([{ id: "client-1", company_name: "Empresa" }]);
+
+    const response = await GET(getRequest("?compact=0"));
+
+    expect(response.status).toBe(200);
+    expect(listClients).toHaveBeenCalledWith(null);
+    expect(listClientOptions).not.toHaveBeenCalled();
   });
 });
 

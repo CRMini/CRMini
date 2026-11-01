@@ -1,5 +1,9 @@
 import { getDb } from "@/lib/db";
 import { randomUUID } from "node:crypto";
+import {
+  normalizeEmailKey,
+  normalizeLinkedInProfileUrl,
+} from "@/lib/linkedin-connections";
 
 export async function createContact(input: Record<string, any>) {
   const result = getDb()
@@ -74,4 +78,179 @@ export async function listContacts(
     )
     .all({ query, industry, include_inactive: includeInactive ? 1 : 0 }) as Record<string, any>[];
   return rows.map((row) => ({ ...row, is_primary: Boolean(row.is_primary), is_active: Boolean(row.is_active) }));
+}
+
+export type ContactImportInput = {
+  rowId: number;
+  clientId: string;
+  fullName: string;
+  jobTitle?: string | null;
+  email?: string | null;
+  linkedinUrl?: string | null;
+};
+
+export type ContactImportStatus =
+  | "imported"
+  | "would_import"
+  | "duplicate"
+  | "duplicate_in_batch"
+  | "invalid_client"
+  | "invalid_name";
+
+export type ContactImportOutcome = {
+  rowId: number;
+  status: ContactImportStatus;
+  contactId?: string;
+  existingContactId?: string;
+};
+
+const CLIENT_QUERY_BLOCK = 400;
+
+/**
+ * Planeja uma importação sem gravar nada. Valida, na ordem: nome vazio/só
+ * espaços ou >200; cliente inexistente/inativo; duplicata forte (URL global ou
+ * e-mail no mesmo cliente); duplicata dentro do próprio lote; senão would_import.
+ */
+export async function planContactImport(
+  items: ContactImportInput[],
+): Promise<ContactImportOutcome[]> {
+  if (items.length === 0) return [];
+
+  const db = getDb();
+
+  const activeContacts = db
+    .prepare(
+      `SELECT id, client_id, linkedin_url, email FROM contacts
+       WHERE is_active = 1 AND (linkedin_url IS NOT NULL OR email IS NOT NULL)`,
+    )
+    .all() as Array<{
+    id: string;
+    client_id: string;
+    linkedin_url: string | null;
+    email: string | null;
+  }>;
+
+  const urlToContactId = new Map<string, string>();
+  const clientEmailToContactId = new Map<string, string>();
+  for (const contact of activeContacts) {
+    const urlKey = normalizeLinkedInProfileUrl(contact.linkedin_url);
+    if (urlKey) urlToContactId.set(urlKey, contact.id);
+    const emailKey = normalizeEmailKey(contact.email);
+    if (emailKey) {
+      clientEmailToContactId.set(`${contact.client_id}|${emailKey}`, contact.id);
+    }
+  }
+
+  const clientIds = [...new Set(items.map((item) => item.clientId).filter(Boolean))];
+  const activeClientIds = new Set<string>();
+  for (let offset = 0; offset < clientIds.length; offset += CLIENT_QUERY_BLOCK) {
+    const block = clientIds.slice(offset, offset + CLIENT_QUERY_BLOCK);
+    const placeholders = block.map(() => "?").join(",");
+    const rows = db
+      .prepare(`SELECT id FROM clients WHERE is_active = 1 AND id IN (${placeholders})`)
+      .all(...block) as Array<{ id: string }>;
+    for (const row of rows) activeClientIds.add(row.id);
+  }
+
+  const batchUrls = new Set<string>();
+  const batchClientEmails = new Set<string>();
+
+  const outcomes: ContactImportOutcome[] = [];
+  for (const item of items) {
+    const trimmedName = (item.fullName ?? "").trim();
+    if (!trimmedName || trimmedName.length > 200) {
+      outcomes.push({ rowId: item.rowId, status: "invalid_name" });
+      continue;
+    }
+    if (!activeClientIds.has(item.clientId)) {
+      outcomes.push({ rowId: item.rowId, status: "invalid_client" });
+      continue;
+    }
+
+    const urlKey = normalizeLinkedInProfileUrl(item.linkedinUrl);
+    if (urlKey && urlToContactId.has(urlKey)) {
+      outcomes.push({
+        rowId: item.rowId,
+        status: "duplicate",
+        existingContactId: urlToContactId.get(urlKey),
+      });
+      continue;
+    }
+
+    const emailKey = normalizeEmailKey(item.email);
+    if (emailKey) {
+      const existing = clientEmailToContactId.get(`${item.clientId}|${emailKey}`);
+      if (existing) {
+        outcomes.push({
+          rowId: item.rowId,
+          status: "duplicate",
+          existingContactId: existing,
+        });
+        continue;
+      }
+    }
+
+    if (urlKey) {
+      if (batchUrls.has(urlKey)) {
+        outcomes.push({ rowId: item.rowId, status: "duplicate_in_batch" });
+        continue;
+      }
+      batchUrls.add(urlKey);
+    }
+    if (emailKey) {
+      const key = `${item.clientId}|${emailKey}`;
+      if (batchClientEmails.has(key)) {
+        outcomes.push({ rowId: item.rowId, status: "duplicate_in_batch" });
+        continue;
+      }
+      batchClientEmails.add(key);
+    }
+
+    outcomes.push({ rowId: item.rowId, status: "would_import" });
+  }
+
+  return outcomes;
+}
+
+export async function createContactsBatch(
+  items: ContactImportInput[],
+): Promise<ContactImportOutcome[]> {
+  const planned = await planContactImport(items);
+  const db = getDb();
+  const insertContact = db.prepare(
+    `INSERT INTO contacts (id, client_id, full_name, job_title, email, linkedin_url, notes, is_primary)
+     SELECT @id, c.id, @full_name, @job_title, @email, @linkedin_url, NULL, 0
+     FROM clients c WHERE c.id = @client_id AND c.is_active = 1
+     RETURNING id`,
+  );
+  const run = db.transaction((): ContactImportOutcome[] => {
+    const outcomes: ContactImportOutcome[] = [];
+    for (let index = 0; index < planned.length; index += 1) {
+      const outcome = planned[index];
+      if (outcome.status !== "would_import") {
+        outcomes.push(outcome);
+        continue;
+      }
+      const item = items[index];
+      const inserted = insertContact.get({
+        id: randomUUID(),
+        client_id: item.clientId,
+        full_name: item.fullName.trim(),
+        job_title: item.jobTitle || null,
+        email: item.email || null,
+        linkedin_url: item.linkedinUrl || null,
+      }) as { id: string } | undefined;
+      if (!inserted) {
+        outcomes.push({ rowId: item.rowId, status: "invalid_client" });
+      } else {
+        outcomes.push({
+          rowId: item.rowId,
+          status: "imported",
+          contactId: inserted.id,
+        });
+      }
+    }
+    return outcomes;
+  });
+  return run();
 }

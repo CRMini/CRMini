@@ -42,6 +42,30 @@ export async function listClients(
   return rows.map(mapClientRow);
 }
 
+export async function listClientOptions(
+  includeInactive = false,
+): Promise<
+  Array<{
+    id: string;
+    company_name: string;
+    trade_name: string | null;
+    is_active: boolean;
+  }>
+> {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, company_name, trade_name, is_active FROM clients
+       ${includeInactive ? "" : "WHERE is_active = 1"} ORDER BY company_name`,
+    )
+    .all() as Array<{
+    id: string;
+    company_name: string;
+    trade_name: string | null;
+    is_active: number;
+  }>;
+  return rows.map((row) => ({ ...row, is_active: Boolean(row.is_active) }));
+}
+
 export async function createClient(
   body: Record<string, any>,
 ): Promise<Record<string, any>> {
