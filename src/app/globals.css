@@ -2021,6 +2021,144 @@ main.records-page .settings-actions {
 /* Chip global de atualização (aplicativo desktop). Exceção justificada ao §11 do
    padrão visual: o chip precisa ficar visível em todas as telas e não existe
    header global, por isso usa position: fixed no canto superior direito. */
+/* Importação de conexões do LinkedIn */
+main.records-page .records-header-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.linkedin-import > .form-field,
+.linkedin-import > .form-section { margin-bottom: 16px; }
+.linkedin-import .upload-button:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.linkedin-import .has-error .upload-button { border-color: #a33; }
+.linkedin-import .contact-filters { grid-template-columns: minmax(0, 1fr) auto auto; }
+.linkedin-import .contact-count { grid-column: 1 / -1; }
+.linkedin-import-table {
+  border: 1px solid #e6e9e5;
+  border-radius: 7px;
+  background: #fff;
+}
+.linkedin-import-table-header,
+.linkedin-import-table-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(0, .8fr) minmax(0, 1fr) 60px;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 15px;
+}
+.linkedin-import-table-header {
+  min-height: 42px;
+  background: #fafbf9;
+  color: #858b84;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.linkedin-import-table-row {
+  min-height: 70px;
+  border-top: 1px solid #edf0ec;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.linkedin-import-table-row [role="cell"] { min-width: 0; }
+.linkedin-import-table-row.editing {
+  background: #fbfdf9;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.linkedin-import-table-row small { display: block; color: var(--muted); margin-top: 5px; }
+.linkedin-company-editor {
+  padding: 16px 18px 6px;
+  border-top: 1px solid #e6e9e5;
+  background: #fcfdfb;
+}
+.linkedin-company-editor:focus { outline: 0; }
+.linkedin-company-editor:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.linkedin-company-editor .form-section-heading { margin-bottom: 14px; }
+.linkedin-company-editor .form-section-heading h2 {
+  margin: 0;
+  color: #263328;
+  font: 700 16px Manrope, sans-serif;
+}
+.linkedin-company-editor .form-section-heading p {
+  margin: 5px 0 0;
+  color: #888;
+  font-size: 11px;
+}
+.linkedin-company-editor .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.linkedin-company-editor .linkedin-import-inline-actions { margin: 14px 0 0; }
+.linkedin-import-badge {
+  display: inline-block;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  padding: 4px 6px;
+  margin: 5px 0;
+  font-size: 10px;
+}
+.linkedin-import-client {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 8px;
+  border: 1px solid #dfe4dd;
+  border-radius: 4px;
+  background: #fff;
+  font: 11px "DM Sans", sans-serif;
+}
+.linkedin-import-client:focus { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px #3986531c; }
+.linkedin-import input[type="checkbox"] { accent-color: var(--accent); }
+.linkedin-import-pagination,
+.linkedin-import-inline-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+@media (max-width: 1100px) {
+  .linkedin-import-table { overflow-x: auto; }
+  .linkedin-import-table-header, .linkedin-import-table-row { min-width: 850px; }
+  .linkedin-import .contact-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  main.records-page .records-header-actions { justify-content: flex-start; }
+  .linkedin-import .contact-filters > label:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 680px) {
+  .linkedin-import .form-actions { flex-wrap: wrap; }
+  .linkedin-import .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .linkedin-import .contact-filters { grid-template-columns: minmax(0, 1fr); }
+  .linkedin-import-table { overflow: visible; border: 0; background: transparent; }
+  .linkedin-import-table-header { display: none; }
+  .linkedin-import-table-row {
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 1px solid #e6e9e5;
+    border-radius: 7px;
+    background: #fff;
+  }
+  .linkedin-import-table-row [role="cell"] { display: grid; gap: 4px; align-content: start; }
+  .linkedin-import-table-row [role="cell"]::before { content: attr(data-label); color: #858b84; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+  .linkedin-import-table-row input[type="checkbox"] { min-height: 38px; width: 38px; }
+  .linkedin-import-table-row a, .linkedin-import .upload-button { min-height: 38px; }
+  .linkedin-import-table-row.editing { border-color: var(--accent); }
+  .linkedin-company-editor {
+    margin: -6px 0 12px;
+    border: 1px solid #e6e9e5;
+    border-radius: 7px;
+    background: #fcfdfb;
+  }
+  .linkedin-company-editor .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 .update-chip {
   position: fixed;
   top: 12px;

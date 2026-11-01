@@ -247,6 +247,10 @@ describe("Lista de contatos", () => {
     render(<ContactsView />);
 
     expect(
+      screen.getByRole("link", { name: "Importar do LinkedIn" }),
+    ).toHaveAttribute("href", "/contatos/importar");
+
+    expect(
       screen.getByRole("link", { name: "＋ Novo contato" }),
     ).toHaveAttribute("href", "/contatos/novo");
     expect(

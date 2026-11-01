@@ -85,9 +85,14 @@ export default function ContactsView() {
             Pessoas e informações de contato dos seus clientes.
           </p>
         </div>
-        <Link className="primary-button" href="/contatos/novo">
-          ＋ Novo contato
-        </Link>
+        <div className="records-header-actions">
+          <Link className="filter-button" href="/contatos/importar">
+            Importar do LinkedIn
+          </Link>
+          <Link className="primary-button" href="/contatos/novo">
+            ＋ Novo contato
+          </Link>
+        </div>
       </header>
       <div className="contact-filters">
         <input
