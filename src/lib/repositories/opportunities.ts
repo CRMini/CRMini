@@ -105,3 +105,19 @@ export async function updateOpportunity(
     .get(params) as Record<string, any> | undefined;
   return row ?? null;
 }
+
+export async function getOpportunity(
+  id: string,
+): Promise<Record<string, any> | null> {
+  const row = getDb()
+    .prepare(
+      `SELECT o.*, c.company_name, p.full_name AS contact_name,
+        p.email AS contact_email, p.phone AS contact_phone
+       FROM opportunities o
+       JOIN clients c ON c.id = o.client_id
+       JOIN contacts p ON p.id = o.contact_id AND p.client_id = o.client_id
+       WHERE o.id = @id`,
+    )
+    .get({ id }) as Record<string, any> | undefined;
+  return row ?? null;
+}

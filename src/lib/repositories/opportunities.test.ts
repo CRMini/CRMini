@@ -9,6 +9,7 @@ import { createClient, deactivateClient } from "./clients";
 import {
   changeOpportunityStatus,
   createOpportunity,
+  getOpportunity,
   listOpportunities,
   updateOpportunity,
 } from "./opportunities";
@@ -179,6 +180,30 @@ describe("updateOpportunity", () => {
       contact_id: contactId,
     });
     expect(updated).toBeNull();
+  });
+});
+
+describe("getOpportunity", () => {
+  it("retorna a oportunidade com cliente e contato resolvidos", async () => {
+    const created = (await createOpportunity(baseOpportunity())) as Record<
+      string,
+      unknown
+    >;
+
+    const found = await getOpportunity(String(created.id));
+
+    expect(found).toMatchObject({
+      id: created.id,
+      company_name: "Empresa Base Ltda.",
+      contact_name: "Contato Base",
+      value: "48000.50",
+    });
+  });
+
+  it("retorna null quando a oportunidade não existe", async () => {
+    expect(
+      await getOpportunity("00000000-0000-4000-8000-000000000000"),
+    ).toBeNull();
   });
 });
 

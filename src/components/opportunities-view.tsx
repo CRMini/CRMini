@@ -409,7 +409,12 @@ export default function OpportunitiesView({
                     <span className="contact-list-avatar">
                       {o.name.trim().slice(0, 2).toUpperCase()}
                     </span>
-                    <b>{o.name}</b>
+                    <Link
+                      className="opportunity-name-link"
+                      href={`/oportunidades/${o.id}`}
+                    >
+                      {o.name}
+                    </Link>
                   </span>
                   <span role="cell" data-label="Tipo do serviço">
                     {o.service_type || "—"}

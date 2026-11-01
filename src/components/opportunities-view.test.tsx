@@ -83,6 +83,9 @@ describe("Lista de oportunidades", () => {
     render(<OpportunitiesView />);
 
     expect(await screen.findByText("Projeto Exemplo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Projeto Exemplo" }),
+    ).toHaveAttribute("href", "/oportunidades/opportunity-1");
     expect(screen.getByText("1 oportunidade(s)")).toBeInTheDocument();
     expect(
       screen.getByRole("table", { name: "Lista de oportunidades" }),

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Breadcrumbs from "@/components/breadcrumbs";
+import DetailItem from "@/components/detail-item";
 import EventTimeline from "@/components/event-timeline";
 import { formatBrazilDate } from "@/lib/brazil-date";
 import { formatCepForDisplay, formatCnpjForDisplay } from "@/lib/masks";
@@ -49,15 +50,6 @@ const breadcrumbs = [
   { label: "Clientes", href: "/clientes" },
   { label: "Detalhes do cliente" },
 ];
-
-function DetailItem({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="client-detail-item">
-      <b>{label}</b>
-      <span>{value?.trim() || "—"}</span>
-    </div>
-  );
-}
 
 function ContactCard({ contact }: { contact: Contact }) {
   return (
@@ -193,7 +185,7 @@ export default function ClientDetail({ id }: { id: string }) {
               Editar cliente
             </Link>
           </header>
-          <div className="client-detail-sections">
+          <div className="detail-sections">
             <EventTimeline
               clientId={id}
               contacts={contacts.map((contact) => ({
@@ -208,7 +200,7 @@ export default function ClientDetail({ id }: { id: string }) {
                   <p>Informações principais do cliente.</p>
                 </div>
               </div>
-              <div className="client-detail-grid">
+              <div className="detail-grid">
                 <DetailItem
                   label="Razão social / nome da empresa"
                   value={client.company_name}
@@ -234,7 +226,7 @@ export default function ClientDetail({ id }: { id: string }) {
                   <p>Localização da empresa.</p>
                 </div>
               </div>
-              <div className="client-detail-grid">
+              <div className="detail-grid">
                 <DetailItem
                   label="CEP"
                   value={formatCepForDisplay(client.postal_code)}

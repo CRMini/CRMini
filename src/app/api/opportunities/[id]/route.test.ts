@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { changeOpportunityStatus, updateOpportunity } = vi.hoisted(() => ({
-  changeOpportunityStatus: vi.fn(),
-  updateOpportunity: vi.fn(),
-}));
+const { changeOpportunityStatus, getOpportunity, updateOpportunity } =
+  vi.hoisted(() => ({
+    changeOpportunityStatus: vi.fn(),
+    getOpportunity: vi.fn(),
+    updateOpportunity: vi.fn(),
+  }));
 
 vi.mock("@/lib/repositories/opportunities", () => ({
   changeOpportunityStatus,
+  getOpportunity,
   updateOpportunity,
 }));
 
-import { PATCH, PUT } from "./route";
+import { GET, PATCH, PUT } from "./route";
 
 const params = { params: Promise.resolve({ id: "opp-1" }) };
 
@@ -37,6 +40,56 @@ const validUpdate = () => ({
   contact_id: "contact-1",
   status: "Proposta",
   currency: "BRL",
+});
+
+describe("GET /api/opportunities/[id]", () => {
+  beforeEach(() => {
+    getOpportunity.mockReset();
+  });
+
+  it("retorna a oportunidade encontrada", async () => {
+    getOpportunity.mockResolvedValue({ id: "opp-1", name: "Projeto" });
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/opportunities/opp-1"),
+      params,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      id: "opp-1",
+      name: "Projeto",
+    });
+    expect(getOpportunity).toHaveBeenCalledWith("opp-1");
+  });
+
+  it("retorna 404 quando a oportunidade não existe", async () => {
+    getOpportunity.mockResolvedValue(null);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/opportunities/opp-1"),
+      params,
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: "Oportunidade não encontrada.",
+    });
+  });
+
+  it("retorna 503 quando o repositório falha", async () => {
+    getOpportunity.mockRejectedValue(new Error("database is locked"));
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/opportunities/opp-1"),
+      params,
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Erro ao consultar oportunidade.",
+    });
+  });
 });
 
 describe("PATCH /api/opportunities/[id]", () => {

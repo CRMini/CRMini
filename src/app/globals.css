@@ -2631,31 +2631,31 @@ main.records-page .client-detail-badge {
   background: var(--accent-soft);
   color: var(--accent-dark);
 }
-main.records-page .client-detail-sections {
+main.records-page .detail-sections {
   display: grid;
   gap: 16px;
 }
-main.records-page .client-detail-sections .event-timeline-section {
+main.records-page .detail-sections .event-timeline-section {
   margin-top: 0;
 }
-main.records-page .client-detail-grid {
+main.records-page .detail-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px 20px;
 }
-main.records-page .client-detail-item {
+main.records-page .detail-item {
   display: grid;
   gap: 3px;
   min-width: 0;
 }
-main.records-page .client-detail-item b {
+main.records-page .detail-item b {
   color: var(--muted);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-main.records-page .client-detail-item span {
+main.records-page .detail-item span {
   color: var(--ink);
   font-size: 12px;
   overflow-wrap: anywhere;
@@ -2730,15 +2730,94 @@ main.records-page .client-detail-notes {
   }
 }
 @media (max-width: 900px) {
-  main.records-page .client-detail-grid {
+  main.records-page .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 600px) {
-  main.records-page .client-detail-grid {
+  main.records-page .detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   main.records-page .client-detail-contact-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Detalhe da oportunidade: consulta somente leitura, com o histórico em primeiro plano. */
+main.records-page .opportunity-detail-header {
+  align-items: center;
+  gap: 20px;
+}
+main.records-page .opportunity-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+main.records-page .opportunity-detail-heading h1 {
+  overflow-wrap: anywhere;
+}
+main.records-page .opportunity-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+main.records-page .opportunity-status-badge--open {
+  border: 1px solid var(--line);
+  background: var(--wash);
+  color: var(--muted);
+}
+main.records-page .opportunity-status-badge--won {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+main.records-page .opportunity-status-badge--lost {
+  border: 1px solid #f0d0d0;
+  background: #fff2f2;
+  color: #a33;
+}
+main.records-page .detail-text-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+main.records-page .detail-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+main.records-page .detail-text b {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+main.records-page .detail-text p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+main.records-page .opportunity-name-link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+main.records-page .opportunity-name-link:hover {
+  color: var(--accent);
+}
+@media (max-width: 680px) {
+  main.records-page .detail-text-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

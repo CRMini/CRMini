@@ -269,13 +269,13 @@ tokens existentes; sem biblioteca e sem `style={{}}`.
 
 ## 7. Fases e priorização
 
-| Fase | Entrega | Esforço | Risco | Depende de |
-|---|---|---|---|---|
-| **F0. Fundação** | `init.sql` + `003_events.sql` + índice único em `opportunities`; `events.ts` (`listEvents`, `getEvent`, `createEvent`); `event-validation.ts`; `POST/GET /api/events`; atualizar `db.test.ts`/`db-resources.test.ts` e `README.md`; testes de repositório e rota | M | Baixo | — |
-| **F1. Detalhe do cliente** | `ClientDetail` em `/clientes/[id]` (resumo + contatos + histórico), `ClientForm` movido para `/clientes/[id]/editar`, `EventTimeline`, `form-field.tsx`, link/breadcrumbs, CSS, testes | M | Baixo | F0 |
-| **F2. Timeline da oportunidade** | `GET /api/opportunities/{id}`, `/oportunidades/[id]`, `opportunity-detail`, link na lista, testes | G | Médio | F0, F1 |
-| **F3. Origem (conversão)** | `createOpportunityFromEvent` (transação), `POST /api/events/{id}/opportunity`, `opportunity-validation.ts`, mini-formulário, testes de rollback | M | **Alto** | F0, F1 |
-| **F4. Ciclo de vida** | `PATCH`/`DELETE` de evento, filtros, limite/paginação | M | Baixo | F0 |
+| Fase | Entrega | Esforço | Risco | Depende de | Status |
+|---|---|---|---|---|---|
+| **F0. Fundação** | `init.sql` + `003_events.sql` + índice único em `opportunities`; `events.ts` (`listEvents`, `getEvent`, `createEvent`); `event-validation.ts`; `POST/GET /api/events`; atualizar `db.test.ts`/`db-resources.test.ts` e `README.md`; testes de repositório e rota | M | Baixo | — | ✅ concluída |
+| **F1. Detalhe do cliente** | `ClientDetail` em `/clientes/[id]` (resumo + contatos + histórico), `ClientForm` movido para `/clientes/[id]/editar`, `EventTimeline`, `form-field.tsx`, link/breadcrumbs, CSS, testes | M | Baixo | F0 | ✅ concluída |
+| **F2. Timeline da oportunidade** | `GET /api/opportunities/{id}`, `/oportunidades/[id]`, `opportunity-detail`, link na lista, testes | G | Médio | F0, F1 | ✅ concluída |
+| **F3. Origem (conversão)** | `createOpportunityFromEvent` (transação), `POST /api/events/{id}/opportunity`, `opportunity-validation.ts`, mini-formulário, testes de rollback | M | **Alto** | F0, F1 | pendente |
+| **F4. Ciclo de vida** | `PATCH`/`DELETE` de evento, filtros, limite/paginação | M | Baixo | F0 | pendente |
 
 Prioridade confirmada:
 
@@ -288,6 +288,8 @@ Prioridade confirmada:
    risco (transação + dois módulos). Depende de F0/F1, não de F2.
 4. **F4 (P2)** — conveniência e manutenção; pode esperar uso real para definir
    paginação e filtros.
+
+F0–F2 concluídas; as próximas são **F3 (origem/conversão)** e **F4 (ciclo de vida)**.
 
 As fases continuam independentes entre si (só compartilham F0/F1): se a
 prioridade mudar, F2 e F3 podem ser invertidas sem retrabalho de schema.

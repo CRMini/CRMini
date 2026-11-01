@@ -2,10 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonObject } from "@/lib/api-json";
 import {
   changeOpportunityStatus,
+  getOpportunity,
   updateOpportunity,
 } from "@/lib/repositories/opportunities";
 
 export const runtime = "nodejs";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  try {
+    const opportunity = await getOpportunity(id);
+    if (!opportunity)
+      return NextResponse.json(
+        { error: "Oportunidade não encontrada." },
+        { status: 404 },
+      );
+    return NextResponse.json(opportunity);
+  } catch {
+    return NextResponse.json(
+      { error: "Erro ao consultar oportunidade." },
+      { status: 503 },
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
