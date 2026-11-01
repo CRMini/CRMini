@@ -26,19 +26,21 @@ describe("getDb", () => {
       "app_settings",
       "clients",
       "contacts",
+      "events",
       "opportunities",
       "schema_migrations",
       "tasks",
     ]);
   });
 
-  it("registra as versões 001 e 002 em schema_migrations no banco novo", () => {
+  it("registra as versões 001, 002 e 003 em schema_migrations no banco novo", () => {
     const rows = getDb()
       .prepare("SELECT version, name FROM schema_migrations ORDER BY version")
       .all();
     expect(rows).toEqual([
       { version: "001", name: "contacts_soft_delete" },
       { version: "002", name: "app_settings" },
+      { version: "003", name: "events" },
     ]);
   });
 });

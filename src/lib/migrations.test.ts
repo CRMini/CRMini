@@ -559,8 +559,13 @@ describe("CLI de migrations", () => {
       db
         .prepare("SELECT version FROM schema_migrations ORDER BY version")
         .all(),
-    ).toEqual([{ version: "001" }, { version: "002" }]);
+    ).toEqual([
+      { version: "001" },
+      { version: "002" },
+      { version: "003" },
+    ]);
     expect(tableExists(db, "app_settings")).toBe(true);
+    expect(tableExists(db, "events")).toBe(true);
     db.close();
   });
 

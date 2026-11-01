@@ -106,6 +106,7 @@ describe("getDb com CRM_RESOURCES_DIR", () => {
       "app_settings",
       "clients",
       "contacts",
+      "events",
       "opportunities",
       "schema_migrations",
       "tasks",
