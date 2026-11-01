@@ -152,6 +152,17 @@ describe("Responsividade dos estilos globais", () => {
     expect(value(actions.body, "justify-self")).toBe("start");
   });
 
+  it("mantém a borda inferior do último card de oportunidade em ≤ 600px", () => {
+    const row = ruleInMedia("(max-width: 600px)", ".opportunity-table-row");
+    expect(value(row.body, "border")).toBe("1px solid #e6e9e5");
+
+    const lastRow = ruleInMedia(
+      "(max-width: 600px)",
+      ".opportunity-table-row:last-child",
+    );
+    expect(value(lastRow.body, "border-bottom")).toBe("1px solid #e6e9e5");
+  });
+
   it("reduz os filtros de contatos para 2 colunas e empilha busca e contador em ≤ 900px", () => {
     // Sem isso a busca e o contador mantinham mínimos fixos e estouravam a viewport.
     const filters = ruleInMedia("(max-width: 900px)", ".contact-filters");

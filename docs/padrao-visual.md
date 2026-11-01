@@ -162,7 +162,7 @@ Estados obrigatórios:
 
 ## 8. Formulários
 
-Estrutura: `<form className="client-form">` (coluna, `gap: 16px`, `max-width: 960px`, centralizado) contendo `form-section`s.
+Estrutura: `<form className="client-form">` (coluna, `gap: 16px`, `max-width: 960px`, centralizado) contendo `form-section`s. Na ficha do cliente, use também `client-form--wide`: os quadros acompanham a largura de `main.records-page` (e da seção de histórico) em vez de 960px; os demais formulários mantêm 960px.
 
 Cada seção:
 

@@ -10,6 +10,7 @@ Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades
 - **Importação do LinkedIn:** seleção do `Connections.csv`, revisão das conexões, vínculo ou cadastro da empresa e importação em lote como contatos.
 - **Oportunidades:** cadastro, acompanhamento por status, motivo de perda, valores, moedas e horas de projeto.
 - **Tarefas:** cadastro, filtros por dia/status e alteração entre `Aberto` e `Concluído`.
+- **Histórico:** registro de eventos passados (reunião, ligação, e-mail, mensagem ou nota) na página do cliente, com vínculo opcional a um contato e a uma oportunidade. A consulta fica separada da edição do cadastro.
 - **Configurações:** nome do usuário (usado nas saudações) e, no aplicativo desktop, caminho do banco e pasta de imagens.
 - **Aplicativo desktop:** splash de inicialização, barra lateral recolhível e atualização automática pelo GitHub Releases no app instalado.
 - **Formulários:** autocomplete de endereço por CEP (ViaCEP), máscaras de CNPJ, CEP e telefone, além da busca de dados cadastrais pelo site da empresa.
@@ -114,6 +115,8 @@ No desktop, os logos ficam em `assets/` na mesma pasta do banco em uso (Configur
 
 O cadastro de cliente também pode buscar os dados cadastrais no site da empresa: razão social, nome fantasia, CNPJ, telefone, e-mail e endereço. A busca lê os dados estruturados da home (JSON-LD, OpenGraph e microdata) e o texto visível, sem crawl e sem gravar nada no servidor; o resultado aparece em uma prévia revisável campo a campo, e campos já preenchidos só são substituídos com marcação explícita do usuário.
 
+O histórico da página do cliente registra o que já aconteceu (evento = passado); agendamentos continuam em Tarefas (tarefa = futuro). Cada evento tem uma data civil (`occurred_at`), não pode ser futuro e aceita vínculo opcional com um contato e uma oportunidade do mesmo cliente. Em `/clientes/[id]` ficam o resumo, os contatos e o histórico; o formulário de edição fica em `/clientes/[id]/editar`.
+
 Para descartar completamente o banco em uso e recriá-lo do zero, encerre o app e apague o arquivo indicado em Configurações no desktop (ou o caminho de `SQLITE_PATH`/padrão no modo web), junto dos arquivos `-wal` e `-shm` ao lado dele. Isso apaga todos os dados.
 
 Para inserir os dados de demonstração (três empresas, seis contatos e três oportunidades), execute:
@@ -210,6 +213,7 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/app/api/contacts/import`: importação transacional em lote das conexões selecionadas.
 - `src/app/api/opportunities`: endpoints de oportunidades, incluindo alteração de status e motivo de perda.
 - `src/app/api/tasks`: endpoints de tarefas, incluindo criação e alteração de status.
+- `src/app/api/events`: histórico de eventos do cliente ou da oportunidade e registro de novos eventos.
 - `src/app/api/settings`: leitura e gravação do nome do usuário em `app_settings`.
 - `src/app/api/logo`: upload e leitura dos logos dos clientes.
 - `src/app/api/logo/from-site`: busca o logo a partir do site informado.

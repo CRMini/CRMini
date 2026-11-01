@@ -131,6 +131,16 @@ describe("Estilos do formulário de cadastro", () => {
     ).toContain("min-width: 176px");
   });
 
+  it("alarga a ficha do cliente para alinhar com o histórico", () => {
+    const wide = ruleBlock("main.records-page .client-form--wide,");
+    expect(wide).toContain("max-width: none");
+
+    const wideActions = ruleBlock(
+      "main.records-page .client-form--wide .form-actions",
+    );
+    expect(wideActions).toContain("max-width: none");
+  });
+
   it("sinaliza problema em campo com borda vermelha e mensagem abaixo", () => {
     const invalidControl = ruleBlock(
       "main.records-page .form-field.has-error input",

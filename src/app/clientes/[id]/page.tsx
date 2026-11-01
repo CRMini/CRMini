@@ -1,10 +1,10 @@
-import ClientForm from "@/components/client-form";
+import ClientDetail from "@/components/client-detail";
 
-export default async function EditClientPage({
+export default async function ClientDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <ClientForm id={id} />;
+  return <ClientDetail id={id} />;
 }
