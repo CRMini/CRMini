@@ -1152,7 +1152,31 @@ main.records-page .client-list {
   overflow: hidden;
 }
 main.records-page .client-row {
+  position: relative;
   min-width: 0;
+}
+/* Link sobreposto: a linha inteira abre o detalhe; as ações ficam acima dele. */
+main.records-page .client-row-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 7px;
+}
+main.records-page .client-row-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+main.records-page .client-row-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+main.records-page .client-row:hover {
+  background: var(--wash);
 }
 main.records-page .company-meta {
   display: grid;

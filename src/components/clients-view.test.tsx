@@ -84,6 +84,12 @@ describe("Lista de clientes", () => {
 
     expect(await screen.findByText("Empresa Alfa")).toBeInTheDocument();
     expect(screen.getByText("1 cliente(s)")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Ver detalhes de Empresa Alfa" }),
+    ).toHaveAttribute("href", "/clientes/client-1");
+    expect(
+      screen.getByRole("link", { name: "Editar cliente Empresa Alfa" }),
+    ).toHaveAttribute("href", "/clientes/client-1/editar");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Nenhum cliente cadastrado" }),

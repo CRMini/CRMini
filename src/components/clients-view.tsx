@@ -139,18 +139,29 @@ export default function ClientsView() {
                     {main?.email || client.email || "Nenhum e-mail"}
                   </small>
                 </div>
-                <Link className="text-link" href={`/clientes/${client.id}`}>
-                  Ver detalhes →
-                </Link>
-                {client.is_active && (
-                  <button
-                    type="button"
-                    className="filter-button"
-                    onClick={() => deactivate(client.id)}
+                <Link
+                  className="client-row-link"
+                  href={`/clientes/${client.id}`}
+                  aria-label={`Ver detalhes de ${client.company_name}`}
+                />
+                <span className="client-row-actions">
+                  <Link
+                    className="text-link"
+                    href={`/clientes/${client.id}/editar`}
+                    aria-label={`Editar cliente ${client.company_name}`}
                   >
-                    Desativar
-                  </button>
-                )}
+                    Editar →
+                  </Link>
+                  {client.is_active && (
+                    <button
+                      type="button"
+                      className="filter-button"
+                      onClick={() => deactivate(client.id)}
+                    >
+                      Desativar
+                    </button>
+                  )}
+                </span>
               </article>
             );
           })}
