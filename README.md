@@ -8,7 +8,7 @@ Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades
 - **Clientes:** listagem, cadastro, edição, logo (enviado ou buscado automaticamente a partir do site do cliente) e desativação. Cada cliente pode ter vários contatos, exibidos no cadastro do cliente.
 - **Contatos:** listagem com filtros, cadastro, edição, ativação/desativação e associação ao cliente.
 - **Importação do LinkedIn:** seleção do `Connections.csv`, revisão das conexões, vínculo ou cadastro da empresa e importação em lote como contatos.
-- **Oportunidades:** cadastro, acompanhamento por status, motivo de perda, valores, moedas, horas de projeto e página de detalhe com histórico.
+- **Oportunidades:** cadastro, acompanhamento por status, motivo de perda, valores, moedas, horas de projeto, página de detalhe com histórico e edição em rota própria.
 - **Tarefas:** cadastro, filtros por dia/status e alteração entre `Aberto` e `Concluído`.
 - **Histórico:** registro de eventos passados (reunião, ligação, e-mail, mensagem ou nota) na página do cliente, com vínculo opcional a um contato e a uma oportunidade. A consulta fica separada da edição do cadastro.
 - **Configurações:** nome do usuário (usado nas saudações) e, no aplicativo desktop, caminho do banco e pasta de imagens.

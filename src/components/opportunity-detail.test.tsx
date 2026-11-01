@@ -96,9 +96,13 @@ describe("OpportunityDetail", () => {
     expect(
       await screen.findByRole("heading", { name: "Nenhum evento registrado" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "← Voltar" })).toHaveAttribute(
+      "href",
+      "/oportunidades",
+    );
     expect(
-      screen.getByRole("link", { name: "← Voltar às oportunidades" }),
-    ).toHaveAttribute("href", "/oportunidades");
+      screen.getByRole("link", { name: "Editar oportunidade" }),
+    ).toHaveAttribute("href", "/oportunidades/opp-1/editar");
 
     fireEvent.click(
       screen.getByRole("button", { name: "＋ Registrar evento" }),

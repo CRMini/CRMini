@@ -129,9 +129,17 @@ export default function OpportunityDetail({ id }: { id: string }) {
                 {opportunity.company_name} · {opportunity.contact_name}
               </p>
             </div>
-            <Link className="text-link" href="/oportunidades">
-              ← Voltar às oportunidades
-            </Link>
+            <div className="opportunity-detail-actions">
+              <Link className="text-link" href="/oportunidades">
+                ← Voltar
+              </Link>
+              <Link
+                className="primary-button"
+                href={`/oportunidades/${id}/editar`}
+              >
+                Editar oportunidade
+              </Link>
+            </div>
           </header>
           <div className="detail-sections">
             <EventTimeline

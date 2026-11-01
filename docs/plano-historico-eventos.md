@@ -217,7 +217,9 @@ Criar tela de detalhe, alinhada ao `docs/padrao-visual.md` §9:
   ação principal por seção;
 - a página mostra os campos que hoje não aparecem na grade (`customer_need`,
   `offered_solution`, `notes`, budget, horas, contato) e a timeline;
-- na lista, o nome da oportunidade vira link (`text-link`), sem coluna nova.
+- a edição fica em `/oportunidades/[id]/editar`, reaproveitando o formulário de
+  criação no modo `edit` (cliente fixo e contato selecionável);
+- na lista, a linha inteira abre o detalhe e a coluna “Ações” leva à edição.
 
 Fallback consciente se a página de detalhe não entrar agora: timeline em linha
 expansível da tabela. Custa menos, mas quebra a grade `role="table"`, exige
@@ -273,7 +275,7 @@ tokens existentes; sem biblioteca e sem `style={{}}`.
 |---|---|---|---|---|---|
 | **F0. Fundação** | `init.sql` + `003_events.sql` + índice único em `opportunities`; `events.ts` (`listEvents`, `getEvent`, `createEvent`); `event-validation.ts`; `POST/GET /api/events`; atualizar `db.test.ts`/`db-resources.test.ts` e `README.md`; testes de repositório e rota | M | Baixo | — | ✅ concluída |
 | **F1. Detalhe do cliente** | `ClientDetail` em `/clientes/[id]` (resumo + contatos + histórico), `ClientForm` movido para `/clientes/[id]/editar`, `EventTimeline`, `form-field.tsx`, link/breadcrumbs, CSS, testes | M | Baixo | F0 | ✅ concluída |
-| **F2. Timeline da oportunidade** | `GET /api/opportunities/{id}`, `/oportunidades/[id]`, `opportunity-detail`, link na lista, testes | G | Médio | F0, F1 | ✅ concluída |
+| **F2. Timeline da oportunidade** | `GET /api/opportunities/{id}`, `/oportunidades/[id]`, `/oportunidades/[id]/editar`, `opportunity-detail`, linha clicável e coluna de ações, testes | G | Médio | F0, F1 | ✅ concluída |
 | **F3. Origem (conversão)** | `createOpportunityFromEvent` (transação), `POST /api/events/{id}/opportunity`, `opportunity-validation.ts`, mini-formulário, testes de rollback | M | **Alto** | F0, F1 | pendente |
 | **F4. Ciclo de vida** | `PATCH`/`DELETE` de evento, filtros, limite/paginação | M | Baixo | F0 | pendente |
 

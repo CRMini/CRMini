@@ -17,16 +17,25 @@ type Client = {
 type Opportunity = {
   id: string;
   client_id: string;
+  contact_id: string;
   name: string;
   company_name: string;
   contact_name: string;
   status: string;
+  loss_reason?: string | null;
   value: string | null;
   currency: string;
   opened_at: string;
   expected_close_at: string | null;
-  service_type?: string;
-  technology?: string;
+  service_type?: string | null;
+  technology?: string | null;
+  resources?: string | null;
+  budget?: string | null;
+  budget_currency?: string | null;
+  notes?: string | null;
+  customer_need?: string | null;
+  offered_solution?: string | null;
+  project_hours?: string | null;
 };
 const statuses = [
   "Em andamento",
@@ -40,18 +49,23 @@ const reasons = ["Preço", "Prazo", "Tecnologia", "Solução"];
 const currencies = ["BRL", "USD", "EUR", "PES"];
 export default function OpportunitiesView({
   mode = "list",
+  id,
 }: {
-  mode?: "list" | "form";
+  mode?: "list" | "form" | "edit";
+  id?: string;
 }) {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]),
     [items, setItems] = useState<Opportunity[]>([]),
+    [record, setRecord] = useState<Opportunity | null>(null),
     [loading, setLoading] = useState(mode === "list"),
+    [recordLoading, setRecordLoading] = useState(mode === "edit"),
     [error, setError] = useState(""),
     [durationUnit, setDurationUnit] = useState<
       "hours" | "days" | "weeks" | "months"
     >("hours"),
     [clientId, setClientId] = useState(""),
+    [contactId, setContactId] = useState(""),
     [status, setStatus] = useState(statuses[0]),
     [search, setSearch] = useState(""),
     [filterClient, setFilterClient] = useState(""),
@@ -68,14 +82,56 @@ export default function OpportunitiesView({
   }
   useEffect(() => {
     setOpenedAt(getBrazilDateString());
-    Promise.all([
+    const requests: Promise<unknown>[] = [
       fetch("/api/clients")
         .then((r) => r.json())
         .then(setClients),
-      refresh(),
-    ]).catch((e: Error) => setError(e.message));
-  }, []);
+    ];
+    if (mode === "list") requests.push(refresh());
+    Promise.all(requests).catch((e: Error) => setError(e.message));
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "edit" || !id) return;
+
+    let active = true;
+    setRecordLoading(true);
+    setError("");
+
+    fetch(`/api/opportunities/${id}`)
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(
+            data.error || "Não foi possível carregar a oportunidade.",
+          );
+        if (!active) return;
+        setRecord(data);
+        setClientId(data.client_id || "");
+        setContactId(data.contact_id || "");
+        setStatus(data.status || statuses[0]);
+        setOpenedAt(String(data.opened_at || "").slice(0, 10));
+      })
+      .catch((reason: Error) => {
+        if (active) setError(reason.message);
+      })
+      .finally(() => {
+        if (active) setRecordLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [mode, id]);
   const client = clients.find((c) => c.id === clientId);
+  const contactOptions = client?.contacts ?? [];
+  const missingClient = Boolean(
+    record && !clients.some((c) => c.id === record.client_id),
+  );
+  const missingContact = Boolean(
+    record?.contact_id &&
+      !contactOptions.some((c) => c.id === record.contact_id),
+  );
   const filtered = items.filter(
     (item) =>
       matchesSearch(
@@ -119,17 +175,23 @@ export default function OpportunitiesView({
       toProjectHours(form.get("project_time") as string, durationUnit) ?? "",
     );
     delete data.project_time;
+    data.contact_id = contactId;
     if (!data.opened_at) data.opened_at = getBrazilDateString();
     if (data.status !== "Perdida") data.loss_reason = "";
+    const editing = mode === "edit";
+    if (editing) data.client_id = record?.client_id || clientId;
     try {
-      const response = await fetch("/api/opportunities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      const response = await fetch(
+        editing ? `/api/opportunities/${id}` : "/api/opportunities",
+        {
+          method: editing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
-      router.push("/oportunidades");
+      router.push(editing ? `/oportunidades/${id}` : "/oportunidades");
       router.refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -142,22 +204,44 @@ export default function OpportunitiesView({
           { label: "Meu espaço", href: "/" },
           {
             label: "Oportunidades",
-            href: mode === "form" ? "/oportunidades" : undefined,
+            href: mode === "list" ? undefined : "/oportunidades",
           },
+          ...(mode === "edit" && id
+            ? [
+                {
+                  label: "Detalhes da oportunidade",
+                  href: `/oportunidades/${id}`,
+                },
+              ]
+            : []),
           ...(mode === "form" ? [{ label: "Nova oportunidade" }] : []),
+          ...(mode === "edit" ? [{ label: "Editar oportunidade" }] : []),
         ]}
       />
       <header className="records-header">
         <div>
           <p className="eyebrow">VENDAS</p>
-          <h1>{mode === "form" ? "Nova oportunidade" : "Oportunidades"}</h1>
+          <h1>
+            {mode === "form"
+              ? "Nova oportunidade"
+              : mode === "edit"
+                ? "Editar oportunidade"
+                : "Oportunidades"}
+          </h1>
           <p className="subheading">
-            Acompanhe propostas e negócios vinculados aos clientes.
+            {mode === "edit"
+              ? "Atualize os dados do negócio."
+              : "Acompanhe propostas e negócios vinculados aos clientes."}
           </p>
         </div>
-        {mode === "form" ? (
-          <Link href="/oportunidades" className="text-link">
-            ← Voltar às oportunidades
+        {mode === "form" || mode === "edit" ? (
+          <Link
+            href={
+              mode === "edit" && id ? `/oportunidades/${id}` : "/oportunidades"
+            }
+            className="text-link"
+          >
+            {mode === "edit" ? "← Voltar aos detalhes" : "← Voltar às oportunidades"}
           </Link>
         ) : (
           <Link href="/oportunidades/nova" className="primary-button">
@@ -165,13 +249,35 @@ export default function OpportunitiesView({
           </Link>
         )}
       </header>
-      {mode === "form" && (
+      {mode === "edit" && recordLoading && (
+        <p role="status">Carregando oportunidade...</p>
+      )}
+      {mode === "edit" && !recordLoading && error && !record && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {(mode === "form" || (mode === "edit" && record)) && (
         <section className="form-section">
-          <h2>Dados da oportunidade</h2>
+          <div className="form-section-heading">
+            <div>
+              <h2>Dados da oportunidade</h2>
+              <p>
+                {mode === "edit"
+                  ? "Atualize os dados do negócio."
+                  : "Preencha os dados do novo negócio."}
+              </p>
+            </div>
+          </div>
           <form className="client-form" onSubmit={submit}>
             <div className="form-grid">
               <label className="form-field">
-                Nome *<input name="name" required />
+                Nome *
+                <input
+                  name="name"
+                  required
+                  defaultValue={record?.name ?? ""}
+                />
               </label>
               <label className="form-field">
                 Cliente *
@@ -179,9 +285,18 @@ export default function OpportunitiesView({
                   name="client_id"
                   required
                   value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
+                  disabled={mode === "edit"}
+                  onChange={(e) => {
+                    setClientId(e.target.value);
+                    setContactId("");
+                  }}
                 >
                   <option value="">Selecione</option>
+                  {missingClient && record && (
+                    <option value={record.client_id}>
+                      {record.company_name} (inativo)
+                    </option>
+                  )}
                   {clients
                     .filter((c) => c.is_active !== false)
                     .map((c) => (
@@ -190,12 +305,26 @@ export default function OpportunitiesView({
                       </option>
                     ))}
                 </select>
+                {mode === "edit" && (
+                  <small>O cliente não pode ser alterado.</small>
+                )}
               </label>
               <label className="form-field">
                 Contato *
-                <select name="contact_id" required disabled={!clientId}>
+                <select
+                  name="contact_id"
+                  required
+                  disabled={!clientId}
+                  value={contactId}
+                  onChange={(e) => setContactId(e.target.value)}
+                >
                   <option value="">Selecione</option>
-                  {client?.contacts?.map((c) => (
+                  {missingContact && record && (
+                    <option value={record.contact_id}>
+                      {record.contact_name} (inativo)
+                    </option>
+                  )}
+                  {contactOptions.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.full_name}
                     </option>
@@ -204,15 +333,27 @@ export default function OpportunitiesView({
               </label>
               <label className="form-field">
                 Tecnologia
-                <input name="technology" />
+                <input
+                  name="technology"
+                  defaultValue={record?.technology ?? ""}
+                />
               </label>
               <label className="form-field">
                 Valor
-                <input name="value" type="number" min="0" step="0.01" />
+                <input
+                  name="value"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={record?.value ?? ""}
+                />
               </label>
               <label className="form-field">
                 Moeda do valor
-                <select name="currency">
+                <select
+                  name="currency"
+                  defaultValue={record?.currency ?? "BRL"}
+                >
                   {currencies.map((c) => (
                     <option key={c}>{c}</option>
                   ))}
@@ -223,19 +364,32 @@ export default function OpportunitiesView({
                 <input
                   name="service_type"
                   placeholder="Suporte, implantação..."
+                  defaultValue={record?.service_type ?? ""}
                 />
               </label>
               <label className="form-field">
                 Recursos
-                <textarea name="resources" />
+                <textarea
+                  name="resources"
+                  defaultValue={record?.resources ?? ""}
+                />
               </label>
               <label className="form-field">
                 Budget do cliente
-                <input name="budget" type="number" min="0" step="0.01" />
+                <input
+                  name="budget"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={record?.budget ?? ""}
+                />
               </label>
               <label className="form-field">
                 Moeda do budget
-                <select name="budget_currency">
+                <select
+                  name="budget_currency"
+                  defaultValue={record?.budget_currency ?? ""}
+                >
                   <option value="">—</option>
                   {currencies.map((c) => (
                     <option key={c}>{c}</option>
@@ -244,7 +398,13 @@ export default function OpportunitiesView({
               </label>
               <label className="form-field">
                 Tempo de projeto
-                <input name="project_time" type="number" min="0" step="0.01" />
+                <input
+                  name="project_time"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={record?.project_hours ?? ""}
+                />
               </label>
               <label className="form-field">
                 Unidade
@@ -273,7 +433,11 @@ export default function OpportunitiesView({
               </label>
               <label className="form-field">
                 Previsão de fechamento
-                <input name="expected_close_at" type="date" />
+                <input
+                  name="expected_close_at"
+                  type="date"
+                  defaultValue={record?.expected_close_at ?? ""}
+                />
               </label>
               <label className="form-field">
                 Status
@@ -290,7 +454,11 @@ export default function OpportunitiesView({
               {status === "Perdida" && (
                 <label className="form-field">
                   Motivo da perda *
-                  <select name="loss_reason" required>
+                  <select
+                  name="loss_reason"
+                  required
+                  defaultValue={record?.loss_reason ?? ""}
+                >
                     <option value="">Selecione</option>
                     {reasons.map((r) => (
                       <option key={r}>{r}</option>
@@ -300,15 +468,24 @@ export default function OpportunitiesView({
               )}
               <label className="form-field">
                 Necessidade do cliente
-                <textarea name="customer_need" />
+                <textarea
+                  name="customer_need"
+                  defaultValue={record?.customer_need ?? ""}
+                />
               </label>
               <label className="form-field">
                 Solução ofertada
-                <textarea name="offered_solution" />
+                <textarea
+                  name="offered_solution"
+                  defaultValue={record?.offered_solution ?? ""}
+                />
               </label>
               <label className="form-field">
                 Observações
-                <textarea name="notes" />
+                <textarea
+                  name="notes"
+                  defaultValue={record?.notes ?? ""}
+                />
               </label>
             </div>
             {error && (
@@ -317,7 +494,9 @@ export default function OpportunitiesView({
               </p>
             )}
             <button className="primary-button" type="submit">
-              Cadastrar oportunidade
+              {mode === "edit"
+                ? "Salvar oportunidade"
+                : "Cadastrar oportunidade"}
             </button>
           </form>
         </section>
@@ -394,6 +573,7 @@ export default function OpportunitiesView({
                 <span role="columnheader">Status</span>
                 <span role="columnheader">Valor</span>
                 <span role="columnheader">Abertura / previsão</span>
+                <span role="columnheader">Ações</span>
               </div>
               {filtered.map((o) => (
                 <article
@@ -409,12 +589,12 @@ export default function OpportunitiesView({
                     <span className="contact-list-avatar">
                       {o.name.trim().slice(0, 2).toUpperCase()}
                     </span>
+                    <b>{o.name}</b>
                     <Link
-                      className="opportunity-name-link"
+                      className="opportunity-row-link"
                       href={`/oportunidades/${o.id}`}
-                    >
-                      {o.name}
-                    </Link>
+                      aria-label={`Ver detalhes de ${o.name}`}
+                    />
                   </span>
                   <span role="cell" data-label="Tipo do serviço">
                     {o.service_type || "—"}
@@ -451,6 +631,18 @@ export default function OpportunitiesView({
                   <span role="cell" data-label="Abertura / previsão">
                     {formatBrazilDate(o.opened_at)} /{" "}
                     {formatBrazilDate(o.expected_close_at)}
+                  </span>
+                  <span
+                    className="opportunity-row-actions"
+                    role="cell"
+                    data-label="Ações"
+                  >
+                    <Link
+                      className="text-link"
+                      href={`/oportunidades/${o.id}/editar`}
+                    >
+                      Editar →
+                    </Link>
                   </span>
                 </article>
               ))}

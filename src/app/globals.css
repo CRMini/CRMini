@@ -1634,7 +1634,7 @@ main.records-page .company-logo img {
       100px,
       0.9fr
     )
-    minmax(125px, 1.1fr);
+    minmax(125px, 1.1fr) minmax(80px, auto);
   gap: 12px;
   align-items: center;
   padding: 13px 15px;
@@ -1650,6 +1650,7 @@ main.records-page .company-logo img {
   text-transform: uppercase;
 }
 .opportunity-table-row {
+  position: relative;
   min-height: 70px;
   border-bottom: 1px solid #edf0ec;
   color: #555e55;
@@ -1703,7 +1704,7 @@ main.records-page .company-logo img {
   }
   .opportunity-table-header,
   .opportunity-table-row {
-    min-width: 1050px;
+    min-width: 1140px;
   }
   .opportunity-filters {
     grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
@@ -2808,16 +2809,48 @@ main.records-page .detail-text p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-main.records-page .opportunity-name-link {
-  color: var(--ink);
-  font-weight: 600;
-  text-decoration: none;
+/* Link sobreposto: a linha inteira abre o detalhe; status e ações ficam acima. */
+main.records-page .opportunity-row-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 7px;
 }
-main.records-page .opportunity-name-link:hover {
-  color: var(--accent);
+main.records-page .opportunity-row-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+main.records-page .opportunity-table-row:hover {
+  background: var(--wash);
+}
+main.records-page .opportunity-status,
+main.records-page .opportunity-row-actions {
+  position: relative;
+  z-index: 2;
+}
+main.records-page .opportunity-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 @media (max-width: 680px) {
   main.records-page .detail-text-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+main.records-page .opportunity-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 680px) {
+  main.records-page .opportunity-detail-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  main.records-page .opportunity-detail-actions .primary-button {
+    width: 100%;
   }
 }

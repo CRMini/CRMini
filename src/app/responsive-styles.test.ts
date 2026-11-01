@@ -437,6 +437,25 @@ describe("Responsividade dos estilos globais", () => {
     expect(value(sidebar.body, "transition")).toBe("none");
   });
 
+  it("sobrepõe o link na linha da oportunidade e mantém as ações acima", () => {
+    const link = topBlocks.find((block) =>
+      block.prelude.includes(".opportunity-row-link"),
+    );
+    expect(link, "regra de .opportunity-row-link ausente").toBeDefined();
+    if (!link) return;
+    expect(value(link.body, "position")).toBe("absolute");
+    expect(value(link.body, "inset")).toBe("0");
+    expect(value(link.body, "z-index")).toBe("1");
+
+    const actions = topBlocks.find((block) =>
+      block.prelude.includes(".opportunity-row-actions"),
+    );
+    expect(actions, "regra de .opportunity-row-actions ausente").toBeDefined();
+    if (!actions) return;
+    expect(value(actions.body, "position")).toBe("relative");
+    expect(value(actions.body, "z-index")).toBe("2");
+  });
+
   it("sobrepõe o link na linha do cliente e mantém as ações acima", () => {
     const link = topBlocks.find((block) =>
       block.prelude.includes(".client-row-link"),
