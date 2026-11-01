@@ -7,7 +7,19 @@ import { formatPhone, formatPhoneForDisplay } from "@/lib/phone";
 
 type Client = { id: string; company_name: string; is_active?: boolean };
 
-export default function ContactForm({ id }: { id?: string }) {
+export default function ContactForm({
+  id,
+  returnTo,
+}: {
+  id?: string;
+  returnTo?: string;
+}) {
+  const safeReturnTo =
+    returnTo === "/contatos/importar" ? returnTo : "/contatos";
+  const backLabel =
+    safeReturnTo === "/contatos/importar"
+      ? "← Voltar à importação"
+      : "← Voltar aos contatos";
   const [clients, setClients] = useState<Client[]>([]);
   const [contact, setContact] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(Boolean(id));
@@ -56,7 +68,7 @@ export default function ContactForm({ id }: { id?: string }) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || (id ? "Não foi possível atualizar o contato." : "Não foi possível cadastrar o contato."));
-      window.location.assign("/contatos");
+      window.location.assign(safeReturnTo);
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
@@ -68,12 +80,12 @@ export default function ContactForm({ id }: { id?: string }) {
   const edit = Boolean(id);
   if (id && error && !contact) return <main className="records-page">
     <Breadcrumbs items={[{ label: "Meu espaço", href: "/" }, { label: "Contatos", href: "/contatos" }, { label: "Editar contato" }]} />
-    <header className="records-header"><div><p className="eyebrow">RELACIONAMENTO</p><h1>Editar contato</h1><p className="subheading">Atualize os dados do contato.</p></div><Link className="text-link" href="/contatos">← Voltar aos contatos</Link></header>
+    <header className="records-header"><div><p className="eyebrow">RELACIONAMENTO</p><h1>Editar contato</h1><p className="subheading">Atualize os dados do contato.</p></div><Link className="text-link" href={safeReturnTo}>{backLabel}</Link></header>
     <p className="form-error" role="alert">{error || "Não foi possível carregar o contato."}</p>
   </main>;
   return <main className="records-page">
     <Breadcrumbs items={[{ label: "Meu espaço", href: "/" }, { label: "Contatos", href: "/contatos" }, { label: edit ? "Editar contato" : "Novo contato" }]} />
-    <header className="records-header"><div><p className="eyebrow">RELACIONAMENTO</p><h1>{edit ? "Editar contato" : "Novo contato"}</h1><p className="subheading">{edit ? "Atualize os dados do contato." : "Cadastre uma pessoa vinculada a um cliente."}</p></div><Link className="text-link" href="/contatos">← Voltar aos contatos</Link></header>
+    <header className="records-header"><div><p className="eyebrow">RELACIONAMENTO</p><h1>{edit ? "Editar contato" : "Novo contato"}</h1><p className="subheading">{edit ? "Atualize os dados do contato." : "Cadastre uma pessoa vinculada a um cliente."}</p></div><Link className="text-link" href={safeReturnTo}>{backLabel}</Link></header>
     <section className="form-section"><h2>Dados do contato</h2>
       <form key={contact?.id || "new"} className="client-form" onSubmit={submit}><div className="form-grid">
         <label className="form-field">Nome completo *<input name="full_name" required maxLength={200} defaultValue={contact?.full_name || ""} /></label>

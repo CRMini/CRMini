@@ -448,6 +448,38 @@ describe("Editar contato", () => {
     ).toBeInTheDocument();
   });
 
+  it("volta para a importação quando recebe returnTo", async () => {
+    mockEditFetch();
+    render(<ContactForm id="contact-1" returnTo="/contatos/importar" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar contato" });
+
+    expect(
+      screen.getByRole("link", { name: /Voltar à importação/ }),
+    ).toHaveAttribute("href", "/contatos/importar");
+  });
+
+  it("ignora returnTo externo e mantém o retorno seguro", async () => {
+    mockEditFetch();
+    render(<ContactForm id="contact-1" returnTo="https://example.com" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar contato" });
+
+    expect(
+      screen.getByRole("link", { name: /Voltar aos contatos/ }),
+    ).toHaveAttribute("href", "/contatos");
+  });
+
+  it("navega para a importação após salvar quando returnTo é interno", async () => {
+    mockEditFetch();
+    render(<ContactForm id="contact-1" returnTo="/contatos/importar" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar contato" });
+
+    fireEvent.click(saveButton());
+
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("/contatos/importar"),
+    );
+  });
+
   it("envia PUT sem client_id e navega para a lista após o sucesso", async () => {
     const fetchMock = mockEditFetch();
     render(<ContactForm id="contact-1" />);

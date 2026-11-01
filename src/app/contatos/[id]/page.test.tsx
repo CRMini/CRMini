@@ -32,6 +32,30 @@ const contact = {
 afterEach(() => cleanup());
 
 describe("Página Editar contato", () => {
+  it("repassa returnTo para o formulário de edição", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      if (url === "/api/clients") return jsonResponse([]);
+      return jsonResponse(contact);
+    });
+
+    render(
+      await EditContactPage({
+        params: Promise.resolve({ id: "contact-1" }),
+        searchParams: Promise.resolve({ returnTo: "/contatos/importar" }),
+      }),
+    );
+
+    expect(
+      await screen.findByRole("link", { name: /Voltar à importação/ }),
+    ).toHaveAttribute("href", "/contatos/importar");
+  });
+
   it("renderiza o formulário de edição do contato", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
