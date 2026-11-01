@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -1085,5 +1086,610 @@ describe("ClientForm — buscar logo do site", () => {
     expect(siteField()).not.toHaveAttribute("aria-invalid");
     expect(siteField().closest(".form-field")).not.toHaveClass("has-error");
     expect(siteField()).toHaveValue("example.org");
+  });
+});
+
+describe("ClientForm — buscar dados do site", () => {
+  const profileUrl = "/api/company/from-site";
+
+  function searchButton() {
+    return screen.getByRole("button", { name: "Buscar dados do site" });
+  }
+
+  function panel() {
+    return screen.getByRole("region", { name: "Dados encontrados no site" });
+  }
+
+  function profileCheckbox(label: string) {
+    return within(panel()).getByRole("checkbox", { name: new RegExp(label) });
+  }
+
+  function fieldResult(
+    value: string,
+    source:
+      "json-ld" | "opengraph" | "microdata" | "links" | "text" = "json-ld",
+  ) {
+    return { value, source, confidence: "high" as const };
+  }
+
+  function profileResponse(fields: Record<string, unknown>) {
+    return { source_url: "https://example.com/", fields, missing: [] };
+  }
+
+  function companyField() {
+    return screen.getByRole("textbox", { name: /Razão social/ });
+  }
+
+  function mockProfile(
+    handler: (url: string, init?: RequestInit) => Promise<Response> | Response,
+  ) {
+    return mockFetch((url, init) =>
+      url === profileUrl ? handler(url, init) : jsonResponse(savedClient()),
+    );
+  }
+
+  const siteHint = "Endereço usado para buscar o logo e os dados cadastrais.";
+
+  function companySection() {
+    return screen
+      .getByRole("heading", { name: "Dados da empresa" })
+      .closest("section")!;
+  }
+
+  it("descreve o gatilho 'Buscar dados do site' com os campos que serão preenchidos", () => {
+    render(<ClientForm />);
+
+    expect(searchButton()).toHaveAccessibleDescription(
+      "Preenche nome, CNPJ, telefone, e-mail e endereço",
+    );
+    expect(
+      screen.getByText("Preenche nome, CNPJ, telefone, e-mail e endereço"),
+    ).toBeVisible();
+  });
+
+  it("associa a dica do campo Site ao input enquanto não há erro", () => {
+    render(<ClientForm />);
+
+    expect(screen.getByText(siteHint)).toBeVisible();
+    expect(siteField()).toHaveAccessibleDescription(siteHint);
+    expect(siteField()).toHaveAttribute(
+      "aria-describedby",
+      screen.getByText(siteHint).id,
+    );
+  });
+
+  it("troca a descrição do campo Site para o erro e mantém a dica visível", async () => {
+    render(<ClientForm />);
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() => expect(siteField()).toHaveFocus());
+    const site = siteField();
+    expect(site).toHaveAttribute("aria-invalid", "true");
+    expect(site).toHaveAccessibleDescription("Informe o site da empresa.");
+    expect(site).toHaveAttribute(
+      "aria-describedby",
+      screen.getByRole("alert").id,
+    );
+    expect(screen.getByText(siteHint)).toBeVisible();
+  });
+
+  it("mantém o gatilho na seção 'Dados da empresa' e busca o perfil a partir dela", async () => {
+    const fetchMock = mockProfile(() =>
+      jsonResponse(profileResponse({ city: fieldResult("São Paulo") })),
+    );
+    render(<ClientForm />);
+
+    expect(
+      within(companySection()).getByRole("button", {
+        name: "Buscar dados do site",
+      }),
+    ).toBe(searchButton());
+
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+    fireEvent.click(
+      within(companySection()).getByRole("button", {
+        name: "Buscar dados do site",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        profileUrl,
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    expect(
+      within(
+        await screen.findByRole("region", {
+          name: "Dados encontrados no site",
+        }),
+      ).getByRole("checkbox", { name: /Cidade/ }),
+    ).toBeChecked();
+  });
+
+  it("mantém 'Buscar dados do site' habilitado sem site, com espaços e com site preenchido", () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+
+    expect(searchButton()).toBeEnabled();
+    expect(searchButton()).toHaveTextContent("Buscar dados do site");
+
+    fireEvent.change(siteField(), { target: { value: "   " } });
+    expect(searchButton()).toBeEnabled();
+
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+    expect(searchButton()).toBeEnabled();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sinaliza, foca o campo Site e não busca quando o site está vazio", async () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+
+    fireEvent.click(searchButton());
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(siteField().closest(".form-field")).toHaveClass("has-error");
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Informe o site da empresa.",
+    );
+    expect(siteField()).toHaveAttribute("aria-invalid", "true");
+    expect(siteField()).toHaveAccessibleDescription(
+      "Informe o site da empresa.",
+    );
+    await waitFor(() => expect(siteField()).toHaveFocus());
+    expect(searchButton()).toBeEnabled();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+
+  it("sinaliza, foca o campo Site e não busca quando o site tem apenas espaços", async () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "   " } });
+
+    fireEvent.click(searchButton());
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(siteField().closest(".form-field")).toHaveClass("has-error");
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Informe o site da empresa.",
+    );
+    expect(siteField()).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(siteField()).toHaveFocus());
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("limpa o erro ao digitar o site e volta a buscar no novo clique", async () => {
+    const fetchMock = mockProfile(() =>
+      jsonResponse(profileResponse({ city: fieldResult("São Paulo") })),
+    );
+    render(<ClientForm />);
+
+    fireEvent.click(searchButton());
+    await waitFor(() => expect(siteField()).toHaveFocus());
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Informe o site da empresa.",
+    );
+
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(siteField()).not.toHaveAttribute("aria-invalid");
+    expect(siteField().closest(".form-field")).not.toHaveClass("has-error");
+    expect(searchButton()).toBeEnabled();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.click(searchButton());
+
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    const call = fetchMock.mock.calls.find(([url]) => url === profileUrl)!;
+    expect(call[1]).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(JSON.parse((call[1] as RequestInit).body as string)).toEqual({
+      website: "example.com",
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("mostra 'Buscando...' e desabilita o botão enquanto a busca está pendente", async () => {
+    let release: (response: Response) => void = () => {};
+    const pending = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    mockProfile(() => pending);
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Buscando..." }),
+      ).toBeDisabled(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Buscar dados do site" }),
+    ).not.toBeInTheDocument();
+
+    release(jsonResponse(profileResponse({})));
+
+    await waitFor(() => expect(searchButton()).toBeEnabled());
+    expect(searchButton()).toHaveTextContent("Buscar dados do site");
+  });
+
+  it("envia POST /api/company/from-site com { website } em JSON", async () => {
+    let release: (response: Response) => void = () => {};
+    const fetchMock = mockProfile(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => url === profileUrl)).toBe(
+        true,
+      ),
+    );
+    const call = fetchMock.mock.calls.find(([url]) => url === profileUrl)!;
+    expect(call[1]).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(JSON.parse((call[1] as RequestInit).body as string)).toEqual({
+      website: "example.com",
+    });
+
+    release(jsonResponse(profileResponse({})));
+    await waitFor(() => expect(searchButton()).toBeEnabled());
+  });
+
+  it("renderiza o painel com valores, origens e um checkbox por campo", async () => {
+    mockProfile(() =>
+      jsonResponse(
+        profileResponse({
+          company_name: fieldResult("Aurora Tecnologia", "json-ld"),
+          city: fieldResult("São Paulo", "text"),
+        }),
+      ),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    const region = await screen.findByRole("region", {
+      name: "Dados encontrados no site",
+    });
+    expect(region).toHaveAttribute("aria-label", "Dados encontrados no site");
+    expect(
+      within(region).getByRole("heading", {
+        level: 3,
+        name: "Dados encontrados no site",
+      }),
+    ).toBeInTheDocument();
+    expect(within(region).getByText("Aurora Tecnologia")).toBeInTheDocument();
+    expect(within(region).getByText("São Paulo")).toBeInTheDocument();
+    expect(within(region).getByText("JSON-LD")).toBeInTheDocument();
+    expect(within(region).getByText("Texto do site")).toBeInTheDocument();
+    expect(within(region).getAllByRole("checkbox")).toHaveLength(2);
+    expect(
+      screen.queryByText("Dados do site aplicados."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("pré-seleciona apenas campos vazios: País e campos preenchidos ficam desmarcados", async () => {
+    mockProfile(() =>
+      jsonResponse(
+        profileResponse({
+          company_name: fieldResult("Aurora Tecnologia"),
+          trade_name: fieldResult("Aurora"),
+          city: fieldResult("São Paulo"),
+          country: fieldResult("Brasil"),
+        }),
+      ),
+    );
+    render(<ClientForm />);
+    fireEvent.change(companyField(), {
+      target: { value: "Empresa Já Cadastrada" },
+    });
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    expect(profileCheckbox("Razão social")).not.toBeChecked();
+    expect(profileCheckbox("Nome fantasia")).toBeChecked();
+    expect(profileCheckbox("Cidade")).toBeChecked();
+    expect(profileCheckbox("País")).not.toBeChecked();
+    expect(screen.getByRole("textbox", { name: "País" })).toHaveValue("Brasil");
+    expect(companyField()).toHaveValue("Empresa Já Cadastrada");
+  });
+
+  it("não sobrescreve campo preenchido quando o checkbox fica desmarcado", async () => {
+    mockProfile(() =>
+      jsonResponse(
+        profileResponse({
+          company_name: fieldResult("Aurora Nova"),
+          trade_name: fieldResult("Aurora Tech", "text"),
+        }),
+      ),
+    );
+    render(<ClientForm />);
+    fireEvent.change(companyField(), {
+      target: { value: "Aurora Antiga" },
+    });
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    expect(profileCheckbox("Razão social")).not.toBeChecked();
+    expect(profileCheckbox("Nome fantasia")).toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar dados" }));
+
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(companyField()).toHaveValue("Aurora Antiga");
+    expect(screen.getByRole("textbox", { name: "Nome fantasia" })).toHaveValue(
+      "Aurora Tech",
+    );
+  });
+
+  it("aplica somente os campos marcados e confirma o resultado", async () => {
+    mockProfile(() =>
+      jsonResponse(
+        profileResponse({
+          company_name: fieldResult("Aurora Nova"),
+          trade_name: fieldResult("Aurora Tech", "text"),
+        }),
+      ),
+    );
+    render(<ClientForm />);
+    fireEvent.change(companyField(), {
+      target: { value: "Aurora Antiga" },
+    });
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    fireEvent.click(profileCheckbox("Razão social"));
+    fireEvent.click(profileCheckbox("Nome fantasia"));
+    expect(profileCheckbox("Razão social")).toBeChecked();
+    expect(profileCheckbox("Nome fantasia")).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar dados" }));
+
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(companyField()).toHaveValue("Aurora Nova");
+    expect(screen.getByRole("textbox", { name: "Nome fantasia" })).toHaveValue(
+      "",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Dados do site aplicados.",
+    );
+  });
+
+  it("cancela sem alterar campos e permite reabrir o painel", async () => {
+    mockProfile(() =>
+      jsonResponse(profileResponse({ city: fieldResult("São Paulo") })),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Cidade" })).toHaveValue("");
+    expect(searchButton()).toBeEnabled();
+
+    fireEvent.click(searchButton());
+    expect(
+      await screen.findByRole("region", {
+        name: "Dados encontrados no site",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    [404, "Nenhum dado cadastral encontrado no site."],
+    [400, "Site inválido. Informe um endereço público."],
+  ])(
+    "mostra o erro %i no campo Site sem marcar os demais campos",
+    async (status, message) => {
+      mockProfile(() => jsonResponse({ error: message }, false, status));
+      render(<ClientForm />);
+      fireEvent.change(companyField(), {
+        target: { value: "Aurora Tecnologia" },
+      });
+      fireEvent.change(screen.getByRole("textbox", { name: /Nome completo/ }), {
+        target: { value: "Ana Souza" },
+      });
+      fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+      fireEvent.click(searchButton());
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(message);
+      expect(screen.getAllByRole("alert")).toHaveLength(1);
+      expect(siteField()).toHaveAttribute("aria-invalid", "true");
+      expect(siteField()).toHaveAccessibleDescription(message);
+      expect(siteField().closest(".form-field")).toHaveClass("has-error");
+      expect(companyField().closest(".form-field")).not.toHaveClass(
+        "has-error",
+      );
+      expect(
+        screen
+          .getByRole("textbox", { name: /Nome completo/ })
+          .closest(".form-field"),
+      ).not.toHaveClass("has-error");
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    },
+  );
+
+  it("mostra a falha 5xx no erro geral, sem erro no campo Site", async () => {
+    mockProfile(() =>
+      jsonResponse({ error: "Não foi possível analisar o site." }, false, 500),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    const message = await screen.findByText(
+      "Não foi possível analisar o site.",
+    );
+    expect(message).toHaveClass("form-error");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(siteField()).not.toHaveAttribute("aria-invalid");
+    expect(siteField().closest(".form-field")).not.toHaveClass("has-error");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("sinaliza falha de rede no campo Site", async () => {
+    mockProfile(() => Promise.reject(new TypeError("failed to fetch")));
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Não foi possível buscar os dados do site.",
+      ),
+    );
+    expect(siteField().closest(".form-field")).toHaveClass("has-error");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("mantém o resultado da última busca quando as respostas chegam fora de ordem", async () => {
+    const pending: Array<(response: Response) => void> = [];
+    mockProfile(
+      () =>
+        new Promise<Response>((resolve) => {
+          pending.push(resolve);
+        }),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    const button = searchButton();
+    // Duas buscas antes do re-render que desabilita o botão: a segunda vira a atual.
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    await waitFor(() => expect(pending).toHaveLength(2));
+
+    await act(async () => {
+      pending[1](
+        jsonResponse(profileResponse({ city: fieldResult("Santos", "text") })),
+      );
+    });
+    await waitFor(() =>
+      expect(within(panel()).getByText("Santos")).toBeInTheDocument(),
+    );
+
+    await act(async () => {
+      pending[0](
+        jsonResponse(
+          profileResponse({ city: fieldResult("Campinas", "text") }),
+        ),
+      );
+    });
+
+    expect(within(panel()).getByText("Santos")).toBeInTheDocument();
+    expect(within(panel()).queryByText("Campinas")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("não dispara lookup de CEP ao aplicar o postal_code", async () => {
+    const fetchMock = mockProfile(() =>
+      jsonResponse(profileResponse({ postal_code: fieldResult("01310-100") })),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar dados" }));
+
+    expect(screen.getByRole("textbox", { name: "CEP" })).toHaveValue(
+      "01310-100",
+    );
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/cep")),
+    ).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => url === profileUrl)).toBe(true);
+  });
+
+  it("não salva o cliente ao aplicar a prévia", async () => {
+    const fetchMock = mockProfile(() =>
+      jsonResponse(profileResponse({ company_name: fieldResult("Aurora") })),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar dados" }));
+
+    const saveCalls = fetchMock.mock.calls.filter(([url, init]) => {
+      const method = (init as RequestInit | undefined)?.method;
+      return (
+        String(url).startsWith("/api/clients") &&
+        (method === "POST" || method === "PUT")
+      );
+    });
+    expect(saveCalls).toHaveLength(0);
+    expect(companyField()).toHaveValue("Aurora");
+  });
+
+  it("expõe nome acessível nos checkboxes e move o foco para o título", async () => {
+    mockProfile(() =>
+      jsonResponse(
+        profileResponse({
+          company_name: fieldResult("Aurora Tecnologia"),
+          postal_code: fieldResult("01310-100"),
+          country: fieldResult("Brasil"),
+        }),
+      ),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await screen.findByRole("region", { name: "Dados encontrados no site" });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          level: 3,
+          name: "Dados encontrados no site",
+        }),
+      ).toHaveFocus(),
+    );
+    expect(profileCheckbox("Razão social")).toBeInTheDocument();
+    expect(profileCheckbox("CEP")).toBeInTheDocument();
+    expect(profileCheckbox("País")).toBeInTheDocument();
+    expect(within(panel()).getAllByRole("checkbox")).toHaveLength(3);
   });
 });

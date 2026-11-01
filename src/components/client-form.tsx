@@ -4,7 +4,14 @@ import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useId, useRef, useState } from "react";
+import {
+  FormEvent,
+  RefObject,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { CLIENT_SEGMENTS } from "@/lib/segments";
 import { type CepAddress, isValidCep, normalizeCep } from "@/lib/cep";
 import { formatPhone, formatPhoneForDisplay } from "@/lib/phone";
@@ -57,6 +64,52 @@ const emptyContact = (): Contact => ({
   notes: "",
   is_primary: false,
 });
+type ProfileFieldKey =
+  | "company_name"
+  | "trade_name"
+  | "tax_id"
+  | "phone"
+  | "email"
+  | "postal_code"
+  | "street"
+  | "street_number"
+  | "city"
+  | "state"
+  | "country";
+type CompanyFieldResult = {
+  value: string;
+  source: "json-ld" | "opengraph" | "microdata" | "links" | "text";
+  confidence: "high" | "medium" | "low";
+};
+type CompanyProfileResponse = {
+  source_url: string;
+  fields: Partial<Record<ProfileFieldKey, CompanyFieldResult>>;
+  missing: string[];
+};
+type ProfileStatus = "idle" | "ready" | "applied";
+
+// Ordem fixa do formulário; evita importar o parser de `company-profile.ts` no cliente.
+const profileFields: readonly { key: ProfileFieldKey; label: string }[] = [
+  { key: "company_name", label: "Razão social / nome da empresa" },
+  { key: "trade_name", label: "Nome fantasia" },
+  { key: "tax_id", label: "CNPJ" },
+  { key: "phone", label: "Telefone geral" },
+  { key: "email", label: "E-mail geral" },
+  { key: "postal_code", label: "CEP" },
+  { key: "street", label: "Logradouro" },
+  { key: "street_number", label: "Número" },
+  { key: "city", label: "Cidade" },
+  { key: "state", label: "Estado" },
+  { key: "country", label: "País" },
+];
+const profileSourceLabels: Record<CompanyFieldResult["source"], string> = {
+  "json-ld": "JSON-LD",
+  opengraph: "OpenGraph",
+  microdata: "Microdata",
+  links: "Link do site",
+  text: "Texto do site",
+};
+
 const initial: FormData = {
   company_name: "",
   trade_name: "",
@@ -85,8 +138,21 @@ export default function ClientForm({ id }: { id?: string }) {
   const [siteError, setSiteError] = useState("");
   const [searchingLogo, setSearchingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchingProfile, setSearchingProfile] = useState(false);
+  const [profile, setProfile] = useState<CompanyProfileResponse | null>(null);
+  const [profileSelection, setProfileSelection] = useState<ProfileFieldKey[]>(
+    [],
+  );
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>("idle");
   const cepRequestId = useRef(0);
   const logoRequestId = useRef(0);
+  const profileRequestId = useRef(0);
+  const siteInputRef = useRef<HTMLInputElement>(null);
+  const profileHeadingRef = useRef<HTMLHeadingElement>(null);
+  const profileHintId = useId();
+  useEffect(() => {
+    if (profileStatus === "ready") profileHeadingRef.current?.focus();
+  }, [profileStatus]);
   useEffect(() => {
     if (id)
       fetch(`/api/clients/${id}`)
@@ -225,6 +291,92 @@ export default function ClientForm({ id }: { id?: string }) {
       if (requestId === logoRequestId.current) setSearchingLogo(false);
     }
   }
+  async function searchSiteProfile() {
+    if (searchingProfile) return;
+
+    if (!data.website.trim()) {
+      setSiteError("Informe o site da empresa.");
+      siteInputRef.current?.focus();
+      setProfile(null);
+      setProfileSelection([]);
+      setProfileStatus("idle");
+      return;
+    }
+
+    const requestId = ++profileRequestId.current;
+
+    setSearchingProfile(true);
+    setSiteError("");
+    setProfile(null);
+    setProfileSelection([]);
+    setProfileStatus("idle");
+
+    try {
+      const response = await fetch("/api/company/from-site", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ website: data.website }),
+      });
+      const result = (await response.json().catch(() => null)) as
+        (CompanyProfileResponse & { error?: string }) | null;
+
+      if (requestId !== profileRequestId.current) return;
+
+      if (response.status >= 500) {
+        setError(result?.error || "Não foi possível buscar os dados do site.");
+        return;
+      }
+
+      if (!response.ok || !result) {
+        setSiteError(
+          result?.error || "Não foi possível buscar os dados do site.",
+        );
+        return;
+      }
+
+      // Pré-seleciona apenas campos vazios: nada preenchido é substituído sem marcação.
+      setProfileSelection(
+        profileFields
+          .map(({ key }) => key)
+          .filter((key) => result.fields[key] && data[key].trim() === ""),
+      );
+      setProfile(result);
+      setProfileStatus("ready");
+    } catch {
+      if (requestId !== profileRequestId.current) return;
+      setSiteError("Não foi possível buscar os dados do site.");
+    } finally {
+      if (requestId === profileRequestId.current) setSearchingProfile(false);
+    }
+  }
+  function toggleProfileField(key: ProfileFieldKey) {
+    setProfileSelection((current) =>
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key],
+    );
+  }
+  function applyProfile() {
+    if (!profile) return;
+
+    setData((current) => {
+      const next = { ...current };
+      for (const key of profileSelection) {
+        const field = profile.fields[key];
+        if (field) next[key] = field.value;
+      }
+      return next;
+    });
+    if (profileSelection.includes("postal_code")) setPostalCodeError("");
+    setProfile(null);
+    setProfileSelection([]);
+    setProfileStatus("applied");
+  }
+  function cancelProfile() {
+    setProfile(null);
+    setProfileSelection([]);
+    setProfileStatus("idle");
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -274,6 +426,28 @@ export default function ClientForm({ id }: { id?: string }) {
             <div>
               <h2>Dados da empresa</h2>
               <p>Informações principais do cliente.</p>
+            </div>
+            <div className="company-profile-trigger">
+              <button
+                type="button"
+                className="filter-button"
+                disabled={searchingProfile}
+                onClick={searchSiteProfile}
+                aria-describedby={profileHintId}
+              >
+                {searchingProfile ? "Buscando..." : "Buscar dados do site"}
+              </button>
+              <small
+                id={profileHintId}
+                className="company-profile-trigger-hint"
+              >
+                Preenche nome, CNPJ, telefone, e-mail e endereço
+              </small>
+              {profileStatus === "applied" && (
+                <span className="company-profile-status" role="status">
+                  Dados do site aplicados.
+                </span>
+              )}
             </div>
           </div>
           <div className="logo-upload">
@@ -367,8 +541,15 @@ export default function ClientForm({ id }: { id?: string }) {
               onChange={(v) => {
                 update("website", v);
                 if (siteError) setSiteError("");
+                profileRequestId.current += 1;
+                setSearchingProfile(false);
+                if (profile) setProfile(null);
+                if (profileSelection.length) setProfileSelection([]);
+                if (profileStatus !== "idle") setProfileStatus("idle");
               }}
               error={siteError}
+              hint="Endereço usado para buscar o logo e os dados cadastrais."
+              inputRef={siteInputRef}
             />
             <Field
               label="Telefone geral"
@@ -385,6 +566,72 @@ export default function ClientForm({ id }: { id?: string }) {
               onChange={(v) => update("email", v)}
             />
           </div>
+          {profile && (
+            <section
+              className="company-profile-panel"
+              role="region"
+              aria-label="Dados encontrados no site"
+            >
+              <h3
+                className="company-profile-heading"
+                ref={profileHeadingRef}
+                tabIndex={-1}
+              >
+                Dados encontrados no site
+              </h3>
+              <div aria-live="polite">
+                <div className="company-profile-list">
+                  {profileFields
+                    .filter(({ key }) => profile.fields[key])
+                    .map(({ key, label }) => {
+                      const field = profile.fields[key];
+                      if (!field) return null;
+                      const checked = profileSelection.includes(key);
+                      const replacesValue = checked && data[key].trim() !== "";
+
+                      return (
+                        <label className="company-profile-row" key={key}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleProfileField(key)}
+                          />
+                          <span className="company-profile-label">{label}</span>
+                          <span className="company-profile-value">
+                            {field.value}
+                          </span>
+                          <span className="company-profile-origin">
+                            {profileSourceLabels[field.source]}
+                          </span>
+                          {replacesValue && (
+                            <span className="company-profile-note">
+                              (substitui o valor atual)
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+              <div className="company-profile-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={profileSelection.length === 0}
+                  onClick={applyProfile}
+                >
+                  Aplicar dados
+                </button>
+                <button
+                  type="button"
+                  className="subtle-button"
+                  onClick={cancelProfile}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </section>
+          )}
         </section>
         <section className="form-section">
           <div className="form-section-heading">
@@ -575,36 +822,42 @@ function Field({
   onChange,
   onBlur,
   error = "",
+  hint = "",
   type = "text",
   required = false,
   placeholder = "",
   format,
+  inputRef,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
   error?: string;
+  hint?: string;
   type?: string;
   required?: boolean;
   placeholder?: string;
   format?: (value: string) => string;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   const inputId = useId();
   const errorId = `${inputId}-error`;
+  const hintId = `${inputId}-hint`;
 
   return (
     <div className={`form-field${error ? " has-error" : ""}`}>
       <label htmlFor={inputId}>{label}</label>
       <input
         id={inputId}
+        ref={inputRef}
         type={type}
         value={value || ""}
         required={required}
         placeholder={placeholder}
         onBlur={onBlur}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={error ? errorId : hint ? hintId : undefined}
         onChange={(event) =>
           onChange(format ? format(event.target.value) : event.target.value)
         }
@@ -613,6 +866,11 @@ function Field({
         <span id={errorId} className="form-field-error" role="alert">
           {error}
         </span>
+      )}
+      {hint && (
+        <small id={hintId} className="form-field-hint">
+          {hint}
+        </small>
       )}
     </div>
   );
