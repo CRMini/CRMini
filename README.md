@@ -7,6 +7,7 @@ Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades
 - **Visão geral:** métricas de contatos e oportunidades, oportunidades recentes e saudação com o nome configurado pelo usuário.
 - **Clientes:** listagem, cadastro, edição, logo e desativação. Cada cliente pode ter vários contatos, exibidos no cadastro do cliente.
 - **Contatos:** listagem com filtros, cadastro, edição, ativação/desativação e associação ao cliente.
+- **Importação do LinkedIn:** seleção do `Connections.csv`, revisão das conexões, vínculo ou cadastro da empresa e importação em lote como contatos.
 - **Oportunidades:** cadastro, acompanhamento por status, motivo de perda, valores, moedas e horas de projeto.
 - **Tarefas:** cadastro, filtros por dia/status e alteração entre `Aberto` e `Concluído`.
 - **Configurações:** nome do usuário (usado nas saudações) e, no aplicativo desktop, caminho do banco e pasta de imagens.
@@ -130,6 +131,19 @@ O seed pode ser executado novamente sem duplicar esses registros; ele usa `ON CO
 - Instantes (`created_at`, `updated_at`, `scheduled_at`) são `TEXT` ISO-8601 em UTC (`YYYY-MM-DDTHH:MM:SS.sssZ`), apresentados na interface no fuso `America/Sao_Paulo`.
 - A busca textual usa `LIKE` do SQLite, que ignora maiúsculas/minúsculas apenas para caracteres ASCII.
 
+## Importação do LinkedIn
+
+A tela **Contatos → Importar do LinkedIn** (`/contatos/importar`) lê o `Connections.csv` exportado pelo LinkedIn. O arquivo é interpretado no navegador e não é enviado ao servidor; apenas as conexões selecionadas são enviadas para a API.
+
+- O parser ignora o preâmbulo do export, remove BOM, aceita campos entre aspas e detecta `,`, `;` ou tabulação no cabeçalho.
+- Limites: 5 MB e 10.000 conexões por arquivo; a importação aceita até 1.000 contatos por requisição.
+- Duplicatas fortes são bloqueadas: mesma URL de perfil do LinkedIn em contato ativo (global) ou mesmo e-mail em contato ativo do mesmo cliente. A checagem é repetida no servidor.
+- Empresas são associadas pelo nome normalizado (sem acentos, caixa e espaços repetidos). Empresas não cadastradas podem ser criadas em um formulário aberto logo abaixo da própria conexão, sem perder a seleção.
+- O progresso (conexões interpretadas, seleção, filtros, página e rolagem) fica no `sessionStorage` desta aba por até duas horas. Assim, ao abrir o detalhe de um contato e voltar, a lista retorna exatamente ao ponto anterior. O rascunho é limpo ao descartar o arquivo ou fechar a aba e nunca contém o texto bruto do CSV.
+- Links para o detalhe do contato a partir da importação usam `?returnTo=/contatos/importar`; o botão de voltar do formulário retorna à importação.
+- A importação grava em uma única transação. Falhas de banco fazem rollback total; itens inválidos ou duplicados são devolvidos com o motivo.
+- Nenhuma migration é necessária: `contacts` já possui os campos usados e não há índice único de e-mail ou LinkedIn.
+
 ## Testes e validação
 
 Execute os testes automatizados (não precisam de serviços externos) com Vitest:
@@ -185,11 +199,13 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/app/page.tsx`: visão geral do CRM, com métricas, oportunidades recentes e saudação.
 - `src/app/clientes`: lista, cadastro e edição de clientes; o cadastro do cliente também gerencia os contatos vinculados.
 - `src/app/contatos`: lista, cadastro e edição de contatos, com ativação/desativação e filtros.
+- `src/app/contatos/importar`: revisão e importação das conexões exportadas do LinkedIn.
 - `src/app/oportunidades`: lista, cadastro e acompanhamento de oportunidades.
 - `src/app/tarefas`: lista, cadastro e alteração de status das tarefas.
 - `src/app/configuracoes`: nome do usuário e, no desktop, caminho do banco e pasta de imagens.
 - `src/app/api/clients`: endpoints de cadastro, consulta, edição e desativação de clientes.
 - `src/app/api/contacts`: endpoints de contatos, incluindo consulta, edição e `PATCH` de ativação/desativação.
+- `src/app/api/contacts/import`: importação transacional em lote das conexões selecionadas.
 - `src/app/api/opportunities`: endpoints de oportunidades, incluindo alteração de status e motivo de perda.
 - `src/app/api/tasks`: endpoints de tarefas, incluindo criação e alteração de status.
 - `src/app/api/settings`: leitura e gravação do nome do usuário em `app_settings`.
@@ -198,7 +214,7 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/components`: componentes compartilhados (barra lateral, breadcrumbs, listagens, formulários e chip de atualização).
 - `src/lib/db.ts`: conexão SQLite única, com schema inicial, migrations e foreign keys habilitadas.
 - `src/lib/repositories`: acesso ao banco para clientes, contatos, oportunidades, tarefas e configurações.
-- `src/lib`: regras e utilitários de domínio (máscaras, CEP, telefone, datas, horas de projeto, métricas do painel, preferência da sidebar e caminhos de logos).
+- `src/lib`: regras e utilitários de domínio (máscaras, CEP, telefone, datas, horas de projeto, métricas do painel, preferência da sidebar, caminhos de logos e parser do export do LinkedIn).
 - `electron/`: processo principal, preload, splash, seleção de banco, migrations, servidor Next e atualização automática. Veja `electron/README.md`.
 - `scripts/`: preparação do standalone, verificação do ABI do `better-sqlite3` e checagem de responsividade.
 - `database/init.sql`: schema SQLite para bancos novos.
