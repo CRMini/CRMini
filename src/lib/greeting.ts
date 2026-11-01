@@ -1,3 +1,5 @@
+import { SAO_PAULO_TIME_ZONE } from "@/lib/brazil-date";
+
 type GreetingPeriod = "morning" | "afternoon" | "evening";
 
 const greetings = {
@@ -52,7 +54,7 @@ export function getGreeting(
   const parts = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     hourCycle: "h23",
-    timeZone: "America/Sao_Paulo",
+    timeZone: SAO_PAULO_TIME_ZONE,
     year: "numeric",
     month: "numeric",
     day: "numeric",
@@ -77,7 +79,7 @@ export function getDashboardDate(date: Date = new Date()): string {
     weekday: "long",
     day: "numeric",
     month: "long",
-    timeZone: "America/Sao_Paulo",
+    timeZone: SAO_PAULO_TIME_ZONE,
   }).format(date);
 
   return formattedDate.toLocaleUpperCase("pt-BR");

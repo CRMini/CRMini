@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
+import EmptyState from "@/components/empty-state";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { formatBrazilDateTime, toCivilDateTimeInput } from "@/lib/brazil-date";
 
 type Client = {
   id: string;
@@ -27,26 +29,6 @@ const types = [
   { value: "telefone", label: "Telefone" },
   { value: "compromisso", label: "Compromisso" },
 ];
-function localDateTime() {
-  const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const v = Object.fromEntries(p.map((x) => [x.type, x.value]));
-  return `${v.year}-${v.month}-${v.day}T${v.hour}:${v.minute}`;
-}
-function pretty(iso: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 export default function TasksView({
   mode = "list",
 }: {
@@ -192,7 +174,7 @@ export default function TasksView({
                 <input
                   name="scheduled_at"
                   type="datetime-local"
-                  defaultValue={localDateTime()}
+                  defaultValue={toCivilDateTimeInput()}
                   required
                 />
               </label>
@@ -268,14 +250,16 @@ export default function TasksView({
             </p>
           )}
           {loading ? <p role="status">Carregando tarefas...</p> : !tasks.length && !error ? (
-            <div className="empty-state">
-              <span>✓</span>
-              <h2>Nenhuma tarefa encontrada</h2>
-              <p>Crie uma tarefa ou ajuste os filtros.</p>
-              <Link className="primary-button" href="/tarefas/nova">
-                ＋ Nova tarefa
-              </Link>
-            </div>
+            <EmptyState
+              icon="✓"
+              title="Nenhuma tarefa encontrada"
+              description="Crie uma tarefa ou ajuste os filtros."
+              action={
+                <Link className="primary-button" href="/tarefas/nova">
+                  ＋ Nova tarefa
+                </Link>
+              }
+            />
           ) : (
             <section className="task-list-section" aria-label="Tarefas do dia">
               <header className="task-list-header">
@@ -311,7 +295,7 @@ export default function TasksView({
                       </span>
                     </div>
                     <time className="task-date" dateTime={task.scheduled_at}>
-                      {pretty(task.scheduled_at)}
+                      {formatBrazilDateTime(task.scheduled_at)}
                     </time>
                     <label className="task-status">
                       <select

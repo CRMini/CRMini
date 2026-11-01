@@ -1,11 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { getDashboardMetrics } from "./dashboard-metrics";
 import { getGreeting } from "./greeting";
-import {
-  toProjectHours,
-  formatBrazilDate,
-  formatBrazilDateTime,
-} from "./project-time";
+import { toProjectHours } from "./project-time";
 import {
   getRecentOpportunities,
   type RecentOpportunity,
@@ -66,30 +62,22 @@ describe("duração e apresentação de datas", () => {
     expect(() => toProjectHours(-1, "hours")).toThrow(RangeError);
     expect(() => toProjectHours("abc", "hours")).toThrow(RangeError);
   });
-
-  it("formata datas e horários no padrão brasileiro e fuso de Brasília", () => {
-    expect(formatBrazilDate("2026-01-01T02:00:00Z")).toBe("31/12/2025");
-    expect(formatBrazilDateTime("2026-01-01T02:00:00Z")).toContain(
-      "31/12/2025",
-    );
-    expect(formatBrazilDate(null)).toBe("—");
-  });
 });
 
 describe("saudação e métricas do painel", () => {
   it("escolhe a saudação conforme hora de Brasília", () => {
-    expect(
-      getGreeting(new Date("2026-10-12T10:00:00-03:00"), "Ana"),
-    ).toMatch(anaNameSuffixPattern);
-    expect(
-      getGreeting(new Date("2026-10-12T15:00:00-03:00"), "Ana"),
-    ).toMatch(anaNameSuffixPattern);
-    expect(
-      getGreeting(new Date("2026-10-12T21:00:00-03:00"), "Ana"),
-    ).toMatch(anaNameSuffixPattern);
-    expect(
-      getGreeting(new Date("2026-10-12T10:00:00-03:00")),
-    ).not.toMatch(anaNameSuffixPattern);
+    expect(getGreeting(new Date("2026-10-12T10:00:00-03:00"), "Ana")).toMatch(
+      anaNameSuffixPattern,
+    );
+    expect(getGreeting(new Date("2026-10-12T15:00:00-03:00"), "Ana")).toMatch(
+      anaNameSuffixPattern,
+    );
+    expect(getGreeting(new Date("2026-10-12T21:00:00-03:00"), "Ana")).toMatch(
+      anaNameSuffixPattern,
+    );
+    expect(getGreeting(new Date("2026-10-12T10:00:00-03:00"))).not.toMatch(
+      anaNameSuffixPattern,
+    );
   });
 
   it("agrega conversão sobre oportunidades encerradas e valores por moeda", async () => {
@@ -112,7 +100,9 @@ describe("saudação e métricas do painel", () => {
       openValueByCurrency: { BRL: "1500.00" },
     });
     expect(query.mock.calls[0][0]).toMatch(/json_group_array/);
-    expect(query.mock.calls[0][0]).toMatch(/status NOT IN \('Ganha', 'Perdida'\)/);
+    expect(query.mock.calls[0][0]).toMatch(
+      /status NOT IN \('Ganha', 'Perdida'\)/,
+    );
   });
 
   it("propaga falhas de consulta ao painel", async () => {

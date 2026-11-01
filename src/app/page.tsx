@@ -10,6 +10,7 @@ import {
   type DashboardMetricRow,
 } from "@/lib/dashboard-metrics";
 import { getDashboardDate, getGreeting } from "@/lib/greeting";
+import { formatBrazilDateMedium } from "@/lib/brazil-date";
 import { getUserName } from "@/lib/repositories/settings";
 
 const avatarColors = ["peach", "blue", "green", "lilac"];
@@ -168,9 +169,7 @@ export default async function Home() {
                           : `${opportunity.currency} ${Number(opportunity.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
                       </td>
                       <td className="date">
-                        {new Intl.DateTimeFormat("pt-BR", {
-                          dateStyle: "medium",
-                        }).format(new Date(opportunity.updated_at))}
+                        {formatBrazilDateMedium(opportunity.updated_at)}
                       </td>
                     </tr>
                   ))}

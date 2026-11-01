@@ -10,10 +10,12 @@ import {
   type FormEvent,
 } from "react";
 import Breadcrumbs from "@/components/breadcrumbs";
+import EmptyState from "@/components/empty-state";
 import LinkedInCompanyEditor, {
   type CompanyDraft,
 } from "@/components/linkedin-company-editor";
-import { formatBrazilDate } from "@/lib/project-time";
+import { formatBrazilDate } from "@/lib/brazil-date";
+import { matchesSearch } from "@/lib/search-match";
 import {
   LINKEDIN_CSV_LIMITS,
   parseLinkedInConnectionsCsv,
@@ -245,14 +247,15 @@ export default function LinkedInImportView() {
       (!onlySelected || selected.has(row.connection.rowId)) &&
       (!onlyMissing ||
         (!row.client && !row.active.length && !row.inactiveCompany)) &&
-      normalizeCompanyKey(
+      matchesSearch(
         [
           row.connection.fullName,
           row.connection.company,
           row.connection.jobTitle,
           row.connection.email,
         ].join(" "),
-      ).includes(normalizeCompanyKey(query)),
+        query,
+      ),
   );
   const currentPage = Math.min(
     page,
@@ -608,14 +611,11 @@ export default function LinkedInImportView() {
         </p>
       )}
       {!parsed && !reading && !loading && !fileError && (
-        <div className="empty-state">
-          <span aria-hidden="true">in</span>
-          <h2>Selecione suas conexões</h2>
-          <p>
-            Envie o Connections.csv exportado pelo LinkedIn. Nenhum contato será
-            selecionado automaticamente.
-          </p>
-        </div>
+        <EmptyState
+          icon={<span aria-hidden="true">in</span>}
+          title="Selecione suas conexões"
+          description="Envie o Connections.csv exportado pelo LinkedIn. Nenhum contato será selecionado automaticamente."
+        />
       )}
       {parsed && (
         <>
@@ -658,14 +658,16 @@ export default function LinkedInImportView() {
             </span>
           </div>
           {!filtered.length ? (
-            <div className="empty-state">
-              <span aria-hidden="true">⌕</span>
-              <h2>Nenhuma conexão encontrada</h2>
-              <p>Experimente ajustar os filtros.</p>
-              <button className="filter-button" onClick={clearFilters}>
-                Limpar filtros
-              </button>
-            </div>
+            <EmptyState
+              icon={<span aria-hidden="true">⌕</span>}
+              title="Nenhuma conexão encontrada"
+              description="Experimente ajustar os filtros."
+              action={
+                <button className="filter-button" onClick={clearFilters}>
+                  Limpar filtros
+                </button>
+              }
+            />
           ) : (
             <div
               className="linkedin-import-table"

@@ -142,6 +142,10 @@ it("lista datas civis, seleciona explicitamente, filtra sem acentos e limpa filt
   });
   expect(screen.getByText("Ana Exemplo")).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Buscar conexões"), {
+    target: { value: "ana   exemplo" },
+  });
+  expect(screen.getByText("Ana Exemplo")).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Buscar conexões"), {
     target: { value: "ausente" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));

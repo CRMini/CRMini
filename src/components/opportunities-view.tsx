@@ -1,13 +1,12 @@
 "use client";
 import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
+import EmptyState from "@/components/empty-state";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import {
-  formatBrazilDate,
-  getBrazilDateString,
-  toProjectHours,
-} from "@/lib/project-time";
+import { formatBrazilDate, getBrazilDateString } from "@/lib/brazil-date";
+import { matchesSearch } from "@/lib/search-match";
+import { toProjectHours } from "@/lib/project-time";
 
 type Client = {
   id: string;
@@ -79,10 +78,10 @@ export default function OpportunitiesView({
   const client = clients.find((c) => c.id === clientId);
   const filtered = items.filter(
     (item) =>
-      (!search ||
-        `${item.name} ${item.company_name} ${item.contact_name}`
-          .toLowerCase()
-          .includes(search.toLowerCase())) &&
+      matchesSearch(
+        `${item.name} ${item.company_name} ${item.contact_name}`,
+        search,
+      ) &&
       (!filterClient || filterClient === item.client_id) &&
       (!filterStatus || item.status === filterStatus),
   );
@@ -370,14 +369,16 @@ export default function OpportunitiesView({
             </p>
           )}
           {loading ? <p role="status">Carregando oportunidades...</p> : !filtered.length && !error ? (
-            <div className="empty-state">
-              <span>◈</span>
-              <h2>Nenhuma oportunidade encontrada</h2>
-              <p>Experimente ajustar a busca ou os filtros.</p>
-              <Link className="primary-button" href="/oportunidades/nova">
-                ＋ Cadastrar oportunidade
-              </Link>
-            </div>
+            <EmptyState
+              icon="◈"
+              title="Nenhuma oportunidade encontrada"
+              description="Experimente ajustar a busca ou os filtros."
+              action={
+                <Link className="primary-button" href="/oportunidades/nova">
+                  ＋ Cadastrar oportunidade
+                </Link>
+              }
+            />
           ) : (
             <div
               className="opportunity-table"

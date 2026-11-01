@@ -3,8 +3,9 @@
 import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import Image from "next/image";
+import EmptyState from "@/components/empty-state";
 import { useEffect, useState } from "react";
-import { formatBrazilDate } from "@/lib/project-time";
+import { formatBrazilDate } from "@/lib/brazil-date";
 import { CLIENT_SEGMENTS } from "@/lib/segments";
 
 type Contact = {
@@ -124,14 +125,16 @@ export default function ContactsView() {
       {error && <p className="form-error" role="alert">{error}</p>}
       {actionError && <p className="form-error" role="alert">{actionError}</p>}
       {loading ? <p role="status">Carregando contatos...</p> : error ? null : !contacts.length ? (
-        <div className="empty-state">
-          <span>♙</span>
-          <h2>Nenhum contato encontrado</h2>
-          <p>Experimente ajustar a busca ou o filtro de segmento.</p>
-          <Link className="text-link" href="/clientes">
-            Ver clientes →
-          </Link>
-        </div>
+        <EmptyState
+          icon="♙"
+          title="Nenhum contato encontrado"
+          description="Experimente ajustar a busca ou o filtro de segmento."
+          action={
+            <Link className="text-link" href="/clientes">
+              Ver clientes →
+            </Link>
+          }
+        />
       ) : (
         <div className="contact-list">
           {contacts.map((contact) => (

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatBrazilDate,
-  formatBrazilDateTime,
-  getBrazilDateString,
-  toProjectHours,
-} from "./project-time";
+import { toProjectHours } from "./project-time";
 
 describe("toProjectHours", () => {
   it.each([
@@ -29,28 +24,4 @@ describe("toProjectHours", () => {
       expect(() => toProjectHours(value, "hours")).toThrow(RangeError);
     },
   );
-});
-
-describe("datas no fuso de São Paulo", () => {
-  it("calcula a data civil perto da virada UTC", () => {
-    expect(getBrazilDateString(new Date("2025-01-10T01:30:00Z"))).toBe(
-      "2025-01-09",
-    );
-    expect(getBrazilDateString(new Date("2025-01-10T03:30:00Z"))).toBe(
-      "2025-01-10",
-    );
-  });
-
-  it("formata datas civis sem aplicar deslocamento de fuso", () => {
-    expect(formatBrazilDate("2025-01-09")).toBe("09/01/2025");
-  });
-
-  it("formata instantes no fuso de São Paulo e trata valores ausentes", () => {
-    expect(formatBrazilDate("2025-01-10T01:30:00Z")).toBe("09/01/2025");
-    expect(formatBrazilDateTime("2025-01-10T01:30:00Z")).toBe(
-      "09/01/2025, 22:30",
-    );
-    expect(formatBrazilDate(null)).toBe("—");
-    expect(formatBrazilDateTime(undefined)).toBe("—");
-  });
 });

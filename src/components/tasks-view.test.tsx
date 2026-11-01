@@ -135,6 +135,7 @@ describe("Lista de tarefas", () => {
 
     expect(await screen.findByText("Retornar contato")).toBeInTheDocument();
     expect(screen.getByText("1 tarefa(s)")).toBeInTheDocument();
+    expect(screen.getByText("26/10/2026, 09:00")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Nenhuma tarefa encontrada" }),

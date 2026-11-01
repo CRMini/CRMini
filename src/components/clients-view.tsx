@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import Image from "next/image";
+import EmptyState from "@/components/empty-state";
 import { useEffect, useState } from "react";
 
 type Client = {
@@ -85,14 +86,16 @@ export default function ClientsView() {
       </div>
       {error && <p className="form-error">{error}</p>}
       {loading ? <p role="status">Carregando clientes...</p> : error ? null : clients.length === 0 ? (
-        <div className="empty-state">
-          <span>◎</span>
-          <h2>Nenhum cliente cadastrado</h2>
-          <p>Comece adicionando uma empresa e seus contatos.</p>
-          <Link className="primary-button" href="/clientes/novo">
-            Cadastrar primeiro cliente
-          </Link>
-        </div>
+        <EmptyState
+          icon="◎"
+          title="Nenhum cliente cadastrado"
+          description="Comece adicionando uma empresa e seus contatos."
+          action={
+            <Link className="primary-button" href="/clientes/novo">
+              Cadastrar primeiro cliente
+            </Link>
+          }
+        />
       ) : (
         <div className="client-list">
           {clients.map((client) => {

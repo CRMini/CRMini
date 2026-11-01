@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", () => ({
@@ -93,6 +93,48 @@ describe("Lista de oportunidades", () => {
         name: "Nenhuma oportunidade encontrada",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("busca oportunidades sem exigir acentos", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input) === "/api/clients") return ok([]);
+      return ok([
+        {
+          id: "opportunity-1",
+          client_id: "client-1",
+          name: "Projeto Alfa",
+          company_name: "Empresa José",
+          contact_name: "Pessoa Exemplo",
+          status: "Em andamento",
+          value: "1000.00",
+          currency: "BRL",
+          opened_at: "2026-10-01",
+          expected_close_at: "2026-11-01",
+        },
+        {
+          id: "opportunity-2",
+          client_id: "client-2",
+          name: "Projeto Beta",
+          company_name: "Empresa Bia",
+          contact_name: "Outra Pessoa",
+          status: "Proposta",
+          value: "2000.00",
+          currency: "BRL",
+          opened_at: "2026-10-02",
+          expected_close_at: "2026-11-02",
+        },
+      ]);
+    });
+
+    render(<OpportunitiesView />);
+    await screen.findByText("Projeto Alfa");
+
+    fireEvent.change(screen.getByLabelText("Buscar oportunidades"), {
+      target: { value: "jose" },
+    });
+
+    expect(screen.getByText("Projeto Alfa")).toBeInTheDocument();
+    expect(screen.queryByText("Projeto Beta")).not.toBeInTheDocument();
   });
 
   it("exibe o estado vazio quando a API responde sem oportunidades", async () => {
