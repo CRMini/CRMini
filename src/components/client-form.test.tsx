@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -18,7 +19,13 @@ vi.mock("next/link", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
-vi.mock("next/image", () => ({ default: () => null }));
+vi.mock("next/image", () => ({
+  // Mock mínimo que expõe src/alt para os testes da prévia do logo.
+  default: ({ src, alt }: { src: string; alt: string }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={typeof src === "string" ? src : ""} alt={alt} />
+  ),
+}));
 
 import ClientForm from "./client-form";
 import { formatCep, formatCnpj } from "@/lib/masks";
@@ -31,18 +38,20 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
 function mockFetch(
   handler?: (url: string, init?: RequestInit) => Promise<Response> | Response,
 ) {
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    if (handler) {
-      const url =
-        typeof input === "string"
-          ? input
-          : input instanceof URL
-            ? input.toString()
-            : input.url;
-      return handler(url, init);
-    }
-    return jsonResponse({ id: "client-1" }, true, 201);
-  });
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input, init) => {
+      if (handler) {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        return handler(url, init);
+      }
+      return jsonResponse({ id: "client-1" }, true, 201);
+    });
 }
 
 function savedClient(overrides: Record<string, unknown> = {}) {
@@ -50,9 +59,7 @@ function savedClient(overrides: Record<string, unknown> = {}) {
     id: "client-1",
     company_name: "Aurora Tecnologia",
     website: "example.com",
-    contacts: [
-      { id: "contact-1", full_name: "Ana Souza", is_primary: true },
-    ],
+    contacts: [{ id: "contact-1", full_name: "Ana Souza", is_primary: true }],
     ...overrides,
   };
 }
@@ -428,13 +435,17 @@ describe("ClientForm — máscara de telefone", () => {
     mockFetch();
     render(<ClientForm />);
 
-    fireEvent.click(screen.getByRole("button", { name: "＋ Adicionar contato" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "＋ Adicionar contato" }),
+    );
     expect(screen.getAllByRole("button", { name: "Remover" })).toHaveLength(2);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Remover" })[1]);
 
     expect(confirmSpy).not.toHaveBeenCalled();
-    expect(screen.queryAllByRole("button", { name: "Remover" })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: "Remover" })).toHaveLength(
+      0,
+    );
   });
 
   it("preserva telefones legados não editados ao salvar outro campo", async () => {
@@ -773,5 +784,306 @@ describe("ClientForm — máscaras de CNPJ e CEP", () => {
     const body = JSON.parse((putCall[1] as RequestInit).body as string);
     expect(body.tax_id).toBe("CNPJ: 12345678000199");
     expect(body.postal_code).toBe("CEP: 01310-100");
+  });
+});
+
+describe("ClientForm — buscar logo do site", () => {
+  function logoPreview() {
+    return screen.queryByRole("img", { name: "Prévia do logo" });
+  }
+
+  function searchButton() {
+    return screen.getByRole("button", { name: "Buscar logo do site" });
+  }
+
+  it("mantém 'Buscar logo do site' desabilitado sem site preenchido", () => {
+    mockFetch();
+    render(<ClientForm />);
+
+    expect(searchButton()).toBeDisabled();
+
+    fireEvent.change(siteField(), { target: { value: "   " } });
+    expect(searchButton()).toBeDisabled();
+
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("mostra 'Buscando...' e envia o site em JSON", async () => {
+    let release: (response: Response) => void = () => {};
+    const pending = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
+    const fetchMock = mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? pending
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Buscando..." }),
+      ).toBeDisabled(),
+    );
+
+    const call = fetchMock.mock.calls.find(
+      ([url]) => url === "/api/logo/from-site",
+    )!;
+    expect(call[1]).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(JSON.parse((call[1] as RequestInit).body as string)).toEqual({
+      website: "example.com",
+    });
+
+    release(jsonResponse({ logo_path: "/api/logo/do-site.png" }));
+
+    await waitFor(() => expect(searchButton()).toBeEnabled());
+  });
+
+  it("atualiza a prévia do logo quando a busca retorna sucesso", async () => {
+    mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? jsonResponse({ logo_path: "/api/logo/do-site.png" })
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+    expect(logoPreview()).not.toBeInTheDocument();
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(logoPreview()).toHaveAttribute("src", "/api/logo/do-site.png"),
+    );
+    expect(
+      screen.getByRole("button", { name: "Remover logo" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(siteField().closest(".form-field")).not.toHaveClass("has-error");
+  });
+
+  it("mostra o erro da API no campo Site sem marcar os demais campos", async () => {
+    mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? jsonResponse({ error: "Nenhum logo encontrado no site." }, false, 404)
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(screen.getByRole("textbox", { name: /Razão social/ }), {
+      target: { value: "Aurora Tecnologia" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: /Nome completo/ }), {
+      target: { value: "Ana Souza" },
+    });
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Nenhum logo encontrado no site.");
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(siteField()).toHaveAttribute("aria-invalid", "true");
+    expect(siteField()).toHaveAccessibleDescription(
+      "Nenhum logo encontrado no site.",
+    );
+    expect(siteField().closest(".form-field")).toHaveClass("has-error");
+    expect(
+      screen
+        .getByRole("textbox", { name: /Razão social/ })
+        .closest(".form-field"),
+    ).not.toHaveClass("has-error");
+    expect(
+      screen
+        .getByRole("textbox", { name: /Nome completo/ })
+        .closest(".form-field"),
+    ).not.toHaveClass("has-error");
+    expect(
+      screen
+        .getByRole("textbox", { name: "Telefone geral" })
+        .closest(".form-field"),
+    ).not.toHaveClass("has-error");
+    expect(logoPreview()).not.toBeInTheDocument();
+  });
+
+  it("mostra falha 5xx sem detalhes no erro geral do formulário", async () => {
+    mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? jsonResponse({}, false, 500)
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    const message = await screen.findByText(
+      "Não foi possível buscar o logo do site.",
+    );
+    expect(message).toHaveClass("form-error");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("mostra a mensagem da API em falha 5xx no erro geral, não no campo Site", async () => {
+    mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? jsonResponse(
+            {
+              error:
+                "Não foi possível salvar a imagem. Verifique se a pasta do banco está disponível e gravável.",
+            },
+            false,
+            500,
+          )
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(screen.getByRole("textbox", { name: /Razão social/ }), {
+      target: { value: "Aurora Tecnologia" },
+    });
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    const message = await screen.findByText(
+      "Não foi possível salvar a imagem. Verifique se a pasta do banco está disponível e gravável.",
+    );
+    expect(message).toHaveClass("form-error");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(siteField()).not.toHaveAttribute("aria-invalid");
+    expect(siteField().closest(".form-field")).not.toHaveClass("has-error");
+    expect(
+      screen
+        .getByRole("textbox", { name: /Razão social/ })
+        .closest(".form-field"),
+    ).not.toHaveClass("has-error");
+    expect(logoPreview()).not.toBeInTheDocument();
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("ignora a resposta atrasada da busca anterior sem sobrescrever a nova", async () => {
+    const pending: Array<(response: Response) => void> = [];
+    mockFetch((url) => {
+      if (url !== "/api/logo/from-site")
+        return jsonResponse({ id: "client-1" }, true, 201);
+      return new Promise<Response>((resolve) => pending.push(resolve));
+    });
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    const button = searchButton();
+    // Duas buscas disparadas antes do re-render que desabilita o botão: a
+    // segunda incrementa o contador de requisições e vira a busca "atual".
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    await waitFor(() => expect(pending).toHaveLength(2));
+
+    await act(async () => {
+      pending[1](jsonResponse({ logo_path: "/api/logo/segunda.png" }));
+    });
+    await waitFor(() =>
+      expect(logoPreview()).toHaveAttribute("src", "/api/logo/segunda.png"),
+    );
+
+    // A primeira busca resolve depois: a resposta precisa ser descartada.
+    await act(async () => {
+      pending[0](jsonResponse({ logo_path: "/api/logo/primeira.png" }));
+    });
+
+    expect(logoPreview()).toHaveAttribute("src", "/api/logo/segunda.png");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(siteField()).not.toHaveAttribute("aria-invalid");
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("usa mensagem genérica quando a conexão falha", async () => {
+    mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? Promise.reject(new TypeError("failed to fetch"))
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Não foi possível buscar o logo do site.",
+      ),
+    );
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("pede confirmação antes de substituir o logo e não busca quando cancelado", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const fetchMock = mockFetch((_url, init) =>
+      init?.method === "PUT"
+        ? jsonResponse({ id: "client-1" })
+        : jsonResponse(savedClient({ logo_path: "/api/logo/atual.png" })),
+    );
+    render(<ClientForm id="client-1" />);
+
+    await waitFor(() =>
+      expect(logoPreview()).toHaveAttribute("src", "/api/logo/atual.png"),
+    );
+
+    fireEvent.click(searchButton());
+
+    expect(confirmSpy).toHaveBeenCalledWith("Substituir o logo atual?");
+    expect(
+      fetchMock.mock.calls.some(([url]) => url === "/api/logo/from-site"),
+    ).toBe(false);
+    expect(logoPreview()).toHaveAttribute("src", "/api/logo/atual.png");
+    expect(searchButton()).toBeEnabled();
+  });
+
+  it("busca o novo logo quando a substituição é confirmada", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockFetch((url, init) => {
+      if (init?.method === "PUT") return jsonResponse({ id: "client-1" });
+      if (url === "/api/logo/from-site")
+        return jsonResponse({ logo_path: "/api/logo/novo.png" });
+      return jsonResponse(savedClient({ logo_path: "/api/logo/atual.png" }));
+    });
+    render(<ClientForm id="client-1" />);
+
+    await waitFor(() =>
+      expect(logoPreview()).toHaveAttribute("src", "/api/logo/atual.png"),
+    );
+
+    fireEvent.click(searchButton());
+
+    await waitFor(() =>
+      expect(logoPreview()).toHaveAttribute("src", "/api/logo/novo.png"),
+    );
+  });
+
+  it("limpa o erro do Site ao editar o campo", async () => {
+    mockFetch((url) =>
+      url === "/api/logo/from-site"
+        ? jsonResponse({ error: "Nenhum logo encontrado no site." }, false, 404)
+        : jsonResponse({ id: "client-1" }, true, 201),
+    );
+    render(<ClientForm />);
+    fireEvent.change(siteField(), { target: { value: "example.com" } });
+    fireEvent.click(searchButton());
+    await screen.findByRole("alert");
+
+    fireEvent.change(siteField(), { target: { value: "example.org" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(siteField()).not.toHaveAttribute("aria-invalid");
+    expect(siteField().closest(".form-field")).not.toHaveClass("has-error");
+    expect(siteField()).toHaveValue("example.org");
   });
 });

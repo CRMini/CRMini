@@ -82,8 +82,11 @@ export default function ClientForm({ id }: { id?: string }) {
   const [data, setData] = useState<FormData>(initial);
   const [error, setError] = useState("");
   const [postalCodeError, setPostalCodeError] = useState("");
+  const [siteError, setSiteError] = useState("");
+  const [searchingLogo, setSearchingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
   const cepRequestId = useRef(0);
+  const logoRequestId = useRef(0);
   useEffect(() => {
     if (id)
       fetch(`/api/clients/${id}`)
@@ -180,6 +183,48 @@ export default function ClientForm({ id }: { id?: string }) {
     if (!response.ok) throw new Error(result.error);
     update("logo_path", result.logo_path);
   }
+  async function searchSiteLogo() {
+    if (!data.website.trim() || searchingLogo) return;
+    if (data.logo_path && !window.confirm("Substituir o logo atual?")) return;
+
+    const requestId = ++logoRequestId.current;
+
+    setSearchingLogo(true);
+    setSiteError("");
+
+    try {
+      const response = await fetch("/api/logo/from-site", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ website: data.website }),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        logo_path?: string;
+        error?: string;
+      } | null;
+
+      if (requestId !== logoRequestId.current) return;
+
+      if (response.status >= 500) {
+        setError(result?.error || "Não foi possível buscar o logo do site.");
+        return;
+      }
+
+      if (!response.ok || !result?.logo_path) {
+        setSiteError(
+          result?.error || "Não foi possível buscar o logo do site.",
+        );
+        return;
+      }
+
+      update("logo_path", result.logo_path);
+    } catch {
+      if (requestId !== logoRequestId.current) return;
+      setSiteError("Não foi possível buscar o logo do site.");
+    } finally {
+      if (requestId === logoRequestId.current) setSearchingLogo(false);
+    }
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -264,6 +309,14 @@ export default function ClientForm({ id }: { id?: string }) {
                   }
                 />
               </label>
+              <button
+                type="button"
+                className="subtle-button"
+                disabled={!data.website.trim() || searchingLogo}
+                onClick={searchSiteLogo}
+              >
+                {searchingLogo ? "Buscando..." : "Buscar logo do site"}
+              </button>
               {data.logo_path && (
                 <button
                   type="button"
@@ -311,7 +364,11 @@ export default function ClientForm({ id }: { id?: string }) {
             <Field
               label="Site"
               value={data.website}
-              onChange={(v) => update("website", v)}
+              onChange={(v) => {
+                update("website", v);
+                if (siteError) setSiteError("");
+              }}
+              error={siteError}
             />
             <Field
               label="Telefone geral"
@@ -406,8 +463,17 @@ export default function ClientForm({ id }: { id?: string }) {
                     type="button"
                     className="subtle-button danger-link"
                     onClick={() => {
-                      if (contact.id && !window.confirm("Desativar este contato? O histórico será preservado.")) return;
-                      update("contacts", data.contacts.filter((_, i) => i !== index));
+                      if (
+                        contact.id &&
+                        !window.confirm(
+                          "Desativar este contato? O histórico será preservado.",
+                        )
+                      )
+                        return;
+                      update(
+                        "contacts",
+                        data.contacts.filter((_, i) => i !== index),
+                      );
                     }}
                   >
                     Remover
