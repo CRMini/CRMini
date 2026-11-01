@@ -326,6 +326,16 @@ Regras:
 | `form-field-error`              | Mensagem abaixo do campo com erro      | `src/app/globals.css`            | `CEP inválido...`                 |
 | `checkbox-field`                | Checkbox com rótulo                    | `src/app/globals.css`            | `client-form.tsx`                 |
 | `logo-upload` / `upload-button` | Upload de imagem                       | `src/app/globals.css`            | `client-form.tsx`                 |
+| `company-profile-panel`         | Contêiner da prévia de dados do site   | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-row`           | Linha campo/valor/origem/checkbox      | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-label`         | Rótulo do campo na prévia              | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-value`         | Valor encontrado na prévia             | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-origin`        | Chip com a origem do valor             | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-actions`       | Ações da prévia (aplicar/cancelar)     | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-trigger`       | Gatilho da busca no cabeçalho da seção | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-trigger-hint`  | Texto de apoio do gatilho              | `src/app/globals.css`            | Cadastro de cliente               |
+| `form-field-hint`               | Dica abaixo do campo                   | `src/app/globals.css`            | Cadastro de cliente               |
+| `company-profile-status`        | Confirmação de aplicação               | `src/app/globals.css`            | Cadastro de cliente               |
 | `contact-form-card`             | Bloco repetido de contato              | `src/app/globals.css`            | `client-form.tsx`                 |
 | `form-actions`                  | Rodapé de ações (sticky)               | `src/app/globals.css`            | `client-form.tsx`                 |
 | `form-error`                    | Mensagem de erro                       | `src/app/globals.css`            | `client-form.tsx`                 |
@@ -364,6 +374,7 @@ NÃO faça:
 - [ ] Problemas em campo usam `.form-field.has-error` + `.form-field-error`, com mensagem textual e sem alterar os demais campos.
 - [ ] Layout funciona em `1100px`, `900px`, `680px` e `600px` sem overflow horizontal indevido.
 - [ ] Navegação por teclado, nomes acessíveis e `role="status"`/`role="alert"` conferidos.
+- [ ] Painel de prévia de dados usa `role="region"` + `aria-label`, `aria-live` na lista, foco no título ao abrir e checkbox com rótulo associado; erros continuam no padrão de campo.
 - [ ] Datas no fuso `America/Sao_Paulo`; datas civis sem conversão.
 - [ ] Testes de comportamento criados/atualizados; se o CSS de formulário mudou, `src/app/form-styles.test.ts` cobre o contrato.
 - [ ] `npm test`, `npm run lint` e `npm run build` executados e resultados reais informados.

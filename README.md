@@ -12,7 +12,7 @@ Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades
 - **Tarefas:** cadastro, filtros por dia/status e alteração entre `Aberto` e `Concluído`.
 - **Configurações:** nome do usuário (usado nas saudações) e, no aplicativo desktop, caminho do banco e pasta de imagens.
 - **Aplicativo desktop:** splash de inicialização, barra lateral recolhível e atualização automática pelo GitHub Releases no app instalado.
-- **Formulários:** autocomplete de endereço por CEP (ViaCEP) e máscaras de CNPJ, CEP e telefone.
+- **Formulários:** autocomplete de endereço por CEP (ViaCEP), máscaras de CNPJ, CEP e telefone, além da busca de dados cadastrais pelo site da empresa.
 
 ## Tecnologias
 
@@ -111,6 +111,8 @@ npm run db:migrate -- /tmp/banco.sqlite
 Antes de aplicar migrations pendentes, o runner cria uma cópia de segurança `<caminho-do-banco>.bak-<AAAAMMDDhhmmss>`; bancos criados por uma versão mais nova do CRM, com migrations desconhecidas, são recusados sem alteração. O formato append-only e as regras de `init.sql` estão em [database/migrations/README.md](./database/migrations/README.md).
 
 No desktop, os logos ficam em `assets/` na mesma pasta do banco em uso (Configurações exibe o caminho). Para backup ou para levar o CRM a outro computador, encerre o app e copie o arquivo do banco (por exemplo, `<pasta>/crm.sqlite`) junto da pasta `<pasta>/assets/`; copiar só o banco deixa as imagens para trás. No modo web, os logos ficam em `CRM_ASSETS_DIR` ou, sem override, em `tmp/assets`, um armazenamento provisório não versionado. Além do upload, o logo pode ser buscado no site do cliente: a busca usa `<link rel="icon">`, `apple-touch-icon`, `og:image` e, por fim, `/favicon.ico`, e aceita apenas PNG, JPG ou WebP até 2 MB (SVG é rejeitado).
+
+O cadastro de cliente também pode buscar os dados cadastrais no site da empresa: razão social, nome fantasia, CNPJ, telefone, e-mail e endereço. A busca lê os dados estruturados da home (JSON-LD, OpenGraph e microdata) e o texto visível, sem crawl e sem gravar nada no servidor; o resultado aparece em uma prévia revisável campo a campo, e campos já preenchidos só são substituídos com marcação explícita do usuário.
 
 Para descartar completamente o banco em uso e recriá-lo do zero, encerre o app e apague o arquivo indicado em Configurações no desktop (ou o caminho de `SQLITE_PATH`/padrão no modo web), junto dos arquivos `-wal` e `-shm` ao lado dele. Isso apaga todos os dados.
 
@@ -211,6 +213,7 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/app/api/settings`: leitura e gravação do nome do usuário em `app_settings`.
 - `src/app/api/logo`: upload e leitura dos logos dos clientes.
 - `src/app/api/logo/from-site`: busca o logo a partir do site informado.
+- `src/app/api/company/from-site`: busca dados cadastrais a partir do site informado.
 - `src/app/api/cep`: consulta de CEP no ViaCEP para autocompletar o endereço do cliente.
 - `src/components`: componentes compartilhados (barra lateral, breadcrumbs, listagens, formulários e chip de atualização).
 - `src/lib/db.ts`: conexão SQLite única, com schema inicial, migrations e foreign keys habilitadas.
@@ -231,4 +234,4 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/app/globals.css`: estilos responsivos da aplicação.
 - `src/app/layout.tsx`: layout raiz, metadados e montagem da barra lateral e do chip de atualização.
 
-Clientes não são excluídos pela aplicação: a ação disponível os desativa e preserva o histórico. Contatos também são desativados em vez de removidos, podendo ser reativados. A duração de projeto é persistida em horas (8 por dia, 40 por semana e 160 por mês). Datas e horários seguem o padrão brasileiro na interface e o fuso `America/Sao_Paulo`; instantes são armazenados em UTC, enquanto campos de data civil permanecem sem conversão de fuso. Logos aceitam PNG, JPG ou WebP até 2 MB; no desktop eles são gravados em `assets/` junto do banco escolhido e, sem o app desktop, em `CRM_ASSETS_DIR` ou `tmp/assets`. A busca pelo site só ocorre por ação do usuário, substitui o logo atual após confirmação, exige site público acessível (endereços privados ou internos são bloqueados) e conexão com a internet.
+Clientes não são excluídos pela aplicação: a ação disponível os desativa e preserva o histórico. Contatos também são desativados em vez de removidos, podendo ser reativados. A duração de projeto é persistida em horas (8 por dia, 40 por semana e 160 por mês). Datas e horários seguem o padrão brasileiro na interface e o fuso `America/Sao_Paulo`; instantes são armazenados em UTC, enquanto campos de data civil permanecem sem conversão de fuso. Logos aceitam PNG, JPG ou WebP até 2 MB; no desktop eles são gravados em `assets/` junto do banco escolhido e, sem o app desktop, em `CRM_ASSETS_DIR` ou `tmp/assets`. A busca pelo site só ocorre por ação do usuário, substitui o logo atual após confirmação, exige site público acessível (endereços privados ou internos são bloqueados) e conexão com a internet. A busca de dados cadastrais é pontual (uma única requisição à home), exige site público, não persiste nada no servidor e nunca substitui um campo preenchido sem confirmação do usuário.
