@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import {
   deactivateClient,
   getClient,
@@ -33,8 +34,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const body = await request.json();
-  if (!body.company_name?.trim())
+  const parsed = await readJsonObject(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  if (typeof body.company_name !== "string" || !body.company_name.trim())
     return NextResponse.json(
       { error: "Informe o nome da empresa." },
       { status: 400 },

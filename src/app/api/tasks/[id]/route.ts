@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import { updateTaskStatus } from "@/lib/repositories/tasks";
 export const runtime = "nodejs";
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  let body: { status?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Corpo JSON inválido." },
-      { status: 400 },
-    );
-  }
+  const parsed = await readJsonObject<{ status?: unknown }>(request, {
+    error: "Corpo JSON inválido.",
+    shapeError: "Status inválido.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   if (!body || !["Aberto", "Concluído"].includes(String(body.status)))
     return NextResponse.json({ error: "Status inválido." }, { status: 400 });
   const { id } = await params;

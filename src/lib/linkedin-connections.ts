@@ -1,3 +1,4 @@
+import { isValidEmail } from "@/lib/email";
 import { normalizeSearch } from "@/lib/normalize-search";
 
 export const LINKEDIN_CSV_LIMITS = {
@@ -286,11 +287,6 @@ export function normalizeLinkedInProfileUrl(
   if (!path.startsWith("/in/") && !path.startsWith("/pub/")) return null;
 
   return `${host}${path}`;
-}
-
-function isValidEmail(value: string): boolean {
-  if (value.length > 254) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 /** Converte "31 Oct 2026" em "2026-10-31" sem criar um instante/fuso. */

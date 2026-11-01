@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import {
   changeOpportunityStatus,
   updateOpportunity,
@@ -9,15 +10,15 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  let body: { status?: string; loss_reason?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Corpo JSON inválido." },
-      { status: 400 },
-    );
-  }
+  const parsed = await readJsonObject<{
+    status?: string;
+    loss_reason?: string;
+  }>(request, {
+    error: "Corpo JSON inválido.",
+    shapeError: "Status ou motivo de perda inválido.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   const statuses = [
       "Em andamento",
       "Desenvolvimento",
@@ -61,15 +62,12 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Corpo JSON inválido." },
-      { status: 400 },
-    );
-  }
+  const parsed = await readJsonObject(request, {
+    error: "Corpo JSON inválido.",
+    shapeError: "Informe nome, cliente e contato.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   const { id } = await params;
   if (
     typeof body.name !== "string" ||

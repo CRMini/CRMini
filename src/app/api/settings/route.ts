@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import { getUserName, saveUserName } from "@/lib/repositories/settings";
 import { normalizeUserName, validateUserName } from "@/lib/user-name";
 
@@ -17,17 +18,12 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Corpo JSON inválido." },
-      { status: 400 },
-    );
-  }
-  if (typeof body !== "object" || body === null || Array.isArray(body))
-    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
+  const parsed = await readJsonObject(request, {
+    error: "Corpo JSON inválido.",
+    shapeError: "Dados inválidos.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
 
   const { userName } = body as { userName?: unknown };
   if (typeof userName !== "string")

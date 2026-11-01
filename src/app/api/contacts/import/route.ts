@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
+import { isValidEmail } from "@/lib/email";
 import {
   createContactsBatch,
   planContactImport,
@@ -17,18 +19,14 @@ function normalizedOptional(value: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
-  }
+  const parsed = await readJsonObject(request, {
+    error: "Dados inválidos.",
+    shapeError: "Dados inválidos.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
 
-  if (typeof body !== "object" || body === null || Array.isArray(body)) {
-    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
-  }
-
-  const { dryRun: dryRunValue, items: rawItems } = body as Record<string, unknown>;
+  const { dryRun: dryRunValue, items: rawItems } = body;
 
   if (dryRunValue !== undefined && typeof dryRunValue !== "boolean") {
     return NextResponse.json(
@@ -98,10 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     const email = normalizedOptional(item.email);
-    if (
-      email &&
-      (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    ) {
+    if (email && !isValidEmail(email)) {
       return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
     }
 

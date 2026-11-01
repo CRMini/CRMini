@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import { deactivateContact, getContact, reactivateContact, updateContact } from "@/lib/repositories/contacts";
 
 export const runtime = "nodejs";
@@ -16,12 +17,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let body: Record<string, any>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
-  }
+  const parsed = await readJsonObject(request, {
+    error: "Dados inválidos.",
+    shapeError: "Dados inválidos.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   if (typeof body.full_name !== "string" || !body.full_name.trim())
     return NextResponse.json({ error: "Informe o nome do contato." }, { status: 400 });
   try {
@@ -35,8 +36,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  let body: Record<string, unknown>;
-  try { body = await request.json(); } catch { return NextResponse.json({ error: "Dados inválidos." }, { status: 400 }); }
+  const parsed = await readJsonObject(request, {
+    error: "Dados inválidos.",
+    shapeError: "Dados inválidos.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   if (typeof body.is_active !== "boolean") return NextResponse.json({ error: "Informe se o contato está ativo." }, { status: 400 });
   try {
     if (!(await getContact(id)))

@@ -100,6 +100,40 @@ describe("PUT /api/clients/[id]", () => {
     expect(updateClient).not.toHaveBeenCalled();
   });
 
+  it("retorna 400 quando o corpo não é JSON", async () => {
+    const response = await PUT(
+      new NextRequest("http://localhost/api/clients/client-1", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: "não é json",
+      }),
+      params,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Corpo JSON inválido.",
+    });
+    expect(updateClient).not.toHaveBeenCalled();
+  });
+
+  it("retorna 400 quando o corpo é um array", async () => {
+    const response = await PUT(
+      new NextRequest("http://localhost/api/clients/client-1", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: "[]",
+      }),
+      params,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Corpo JSON inválido.",
+    });
+    expect(updateClient).not.toHaveBeenCalled();
+  });
+
   it("retorna 404 quando o cliente não existe", async () => {
     updateClient.mockResolvedValue(null);
 

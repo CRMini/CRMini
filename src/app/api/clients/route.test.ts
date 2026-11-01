@@ -169,8 +169,26 @@ describe("POST /api/clients", () => {
     expect(createClient).toHaveBeenCalledWith(payload);
   });
 
-  it("rejeita corpo que não é JSON (comportamento atual)", async () => {
-    await expect(POST(rawPostRequest("não é json"))).rejects.toThrow();
+  it("rejeita corpo que não é JSON com 400", async () => {
+    const response = await POST(rawPostRequest("não é json"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Corpo JSON inválido.",
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["array", "[]"],
+    ["nulo", "null"],
+  ])("rejeita corpo %s com 400", async (_, body) => {
+    const response = await POST(rawPostRequest(body));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Corpo JSON inválido.",
+    });
     expect(createClient).not.toHaveBeenCalled();
   });
 

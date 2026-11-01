@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import { createContact, listContacts } from "@/lib/repositories/contacts";
 
 export const runtime = "nodejs";
@@ -19,12 +20,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: Record<string, any>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
-  }
+  const parsed = await readJsonObject(request, {
+    error: "Dados inválidos.",
+    shapeError: "Dados inválidos.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   if (typeof body.full_name !== "string" || !body.full_name.trim())
     return NextResponse.json({ error: "Informe o nome do contato." }, { status: 400 });
   if (typeof body.client_id !== "string" || !body.client_id.trim())

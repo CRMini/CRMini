@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/api-json";
 import { createTask, listTasks } from "@/lib/repositories/tasks";
 import { saoPauloDayRange } from "@/lib/task-date";
 import { validateTask } from "@/lib/task-validation";
@@ -25,17 +26,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Corpo JSON inválido." },
-      { status: 400 },
-    );
-  }
-  if (!body || typeof body !== "object" || Array.isArray(body))
-    return NextResponse.json({ error: "Dados inválidos." }, { status: 400 });
+  const parsed = await readJsonObject(request, {
+    error: "Corpo JSON inválido.",
+    shapeError: "Dados inválidos.",
+  });
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
   const error = validateTask(body);
   if (error) return NextResponse.json({ error }, { status: 400 });
   try {
