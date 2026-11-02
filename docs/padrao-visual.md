@@ -147,9 +147,19 @@ Barra de filtros: `.contact-filters` (fundo branco, borda `--line`, raio `6px`, 
 Lista de registros:
 
 - `.contact-list` — superfície branca, borda `--line`, raio `7px`.
-- `.contact-row` — grid de 6 colunas (`44px minmax(120px,1.1fr) minmax(120px,1fr) minmax(130px,1fr) 28px auto`), `min-height: 88px`, `padding: 14px 17px`, divisor inferior. A primeira coluna é avatar (`.contact-list-avatar`, `40px`, círculo `--accent-soft`); a última (`auto`) contém a ação de edição por linha (`text-link`).
+- `.contact-row` — grid de 6 colunas (`44px minmax(120px,1.1fr) minmax(120px,1fr) minmax(130px,1fr) 28px auto`), `min-height: 88px`, `padding: 14px 17px`, divisor inferior. A primeira coluna é avatar (`.contact-list-avatar`, `40px`, círculo `--accent-soft`); a última (`auto`) contém as ações da linha.
 - Hierarquia interna: `b` com `12px/600` para o nome; `small`/`span` com `10px` e `#858b84` para metadados; rótulos de metadado com `9px`, caixa alta e `letter-spacing`.
-- Ações por linha: `text-link` para abrir detalhes; `filter-button` para ações secundárias (por exemplo, desativar). Ação destrutiva DEVE pedir confirmação.
+
+#### Ações de linha (clientes, contatos, oportunidades, histórico e importação)
+
+- As ações ficam SEMPRE no fim da linha, no contêiner próprio da listagem (`client-row-actions`, `contact-row-actions`, `opportunity-row-actions`, `event-item-actions`, `linkedin-import-actions`), alinhadas à direita.
+- Cada ação é um botão de pictograma (`.row-action`, ou `RowActionLink`/`RowActionButton` de `src/components/row-action.tsx`): quadrado de `32px` com borda `#dfe4dd`, raio `5px`, fundo branco, pictograma centrado; hover/foco em `--accent` e variante destrutiva `row-action--danger` em `#a33`.
+- Quando o pictograma sozinho não deixa claro o objeto da ação, use a variante com texto curto (`row-action--labeled`, prop `text`): `＋ Empresa` em vez de só `＋`. O texto é curto e complementa o pictograma; o tooltip continua com a ação completa.
+- A ação DEVE ter tooltip com o texto da ação, exibido no hover e no foco por teclado (via `data-tooltip`), e nome acessível contextual em `aria-label` (`Editar contato Maria`, `Desativar cliente Alfa`). NUNCA deixe o pictograma sem nome acessível, nem use só o `title` nativo.
+- Pictogramas do padrão: `✎` editar, `⊘` desativar, `↻` reativar, `✕` excluir, `↗` abrir registro, `＋` incluir e `▴` fechar o painel aberto. O pictograma é decorativo (`aria-hidden="true"`).
+- Controles que abrem e fecham um painel na própria linha mantêm `aria-expanded` e `aria-controls` no botão de pictograma (caso do cadastro de empresa na importação de contatos).
+- Ação destrutiva DEVE pedir confirmação (`window.confirm`) e as demais `text-link` continuam válidas para navegação no fim de linha quando a ação não é um comando curto.
+- Em `≤ 600px` o alvo de toque é de `38px`; o tooltip é oculto porque não há hover.
 
 Grade semântica (muitas colunas): use `role="table"`, `role="row"`, `role="cell"` e `data-label` em cada célula. O cabeçalho `.opportunity-table-header` usa `9px/700`, caixa alta, fundo `#fafbf9` e `min-height: 42px`; as linhas têm `min-height: 70px`, `11px` e divisor `#edf0ec`. Controles editáveis por linha (`.opportunity-status select`, `.task-status select`) DEVEM ter borda, raio, tipografia e foco próprios — nunca `<select>` nativo sem estilo.
 
@@ -315,6 +325,9 @@ Regras:
 | `contact-count`                 | Contagem de resultados                 | `src/app/globals.css`            | `12 contato(s)`                   |
 | `contact-list` / `contact-row`  | Lista de registros                     | `src/app/globals.css`            | `contacts-view.tsx`               |
 | `contact-list-avatar`           | Iniciais/ícone do registro             | `src/app/globals.css`            | `tasks-view.tsx`                  |
+| `row-action`                    | Ação de linha com pictograma + tooltip | `src/app/globals.css`            | `✎` editar, `⊘` desativar         |
+| `row-action--danger`            | Ação de linha destrutiva               | `src/app/globals.css`            | `✕` excluir, `⊘` desativar        |
+| `row-action--labeled`           | Pictograma + texto curto (ação ambígua)| `src/app/globals.css`            | `＋ Empresa`                      |
 | `opportunity-table`             | Grade semântica de muitas colunas      | `src/app/globals.css`            | `opportunities-view.tsx`          |
 | `task-list-header` / `task-row` | Lista de tarefas com status editável   | `src/app/globals.css`            | `tasks-view.tsx`                  |
 | `client-form`                   | `<form>` de cadastro/edição            | `src/app/globals.css`            | `client-form.tsx`                 |

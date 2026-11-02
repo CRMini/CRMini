@@ -21,6 +21,7 @@ Ao criar ou ajustar telas de listagem, use `src/components/contacts-view.tsx` co
 - Use `DM Sans` no conteúdo e mantenha o padrão compacto: metadados pequenos, títulos de registro em aproximadamente 12px, espaçamento uniforme e avatares/ícones discretos.
 - Todos os controles de filtro devem compartilhar o mesmo tratamento visual: campos dentro de `label` (inclusive `input[type=date]`) devem ter altura de 38px, largura fluida, borda `#dfe4dd`, raio 4px, fundo branco e fonte `12px DM Sans`, com foco `--accent` e anel de foco. Não dependa apenas do seletor `.contact-filters > input`, pois controles embrulhados em `label` não são filhos diretos.
 - Controles de status editáveis em cada linha devem ter estilo explícito e consistente com os campos da barra de filtros (borda, raio, tipografia e estado de foco), dimensão compatível com o conteúdo e posicionamento responsivo. Não deixe `<select>` nativo sem estilo nem remova o indicador de foco.
+- Ações por linha ficam no fim da linha e usam botões de pictograma com tooltip (`row-action` / `row-action--danger`, componente `src/components/row-action.tsx`): o pictograma é decorativo, o texto da ação aparece no tooltip e no `aria-label` com contexto. Ação destrutiva continua exigindo confirmação.
 - Não introduza paleta, sombras, botões, filtros ou padrões de tabela independentes quando classes existentes forem adequadas.
 - Em larguras menores, reordene informações em vez de permitir overflow horizontal; siga breakpoints e adaptações existentes para contatos (`900px` e `600px`).
 
