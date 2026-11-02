@@ -167,15 +167,28 @@ it("cadastra empresa inline, valida nome e atribui todas as linhas preservando s
   await setup();
   fireEvent.click(ana());
   fireEvent.click(
-    screen.getAllByRole("button", { name: "Cadastrar empresa" })[0],
+    screen.getAllByRole("button", { name: /^Cadastrar empresa para / })[0],
   );
   const card = screen.getByRole("region", {
     name: "Cadastrar empresa para Bia Teste",
   });
   expect(card).toHaveFocus();
+  const closeButton = screen.getAllByRole("button", {
+    name: /^Fechar cadastro de empresa para /,
+  })[0];
+  expect(closeButton).toHaveAttribute("aria-expanded", "true");
+  expect(closeButton).toHaveClass("row-action");
+  expect(closeButton).toHaveClass("row-action--labeled");
   expect(
-    screen.getAllByRole("button", { name: "Fechar cadastro" })[0],
-  ).toHaveAttribute("aria-expanded", "true");
+    within(closeButton).getByText("Empresa", { selector: ".row-action-text" }),
+  ).toBeInTheDocument();
+  expect(closeButton).toHaveAttribute(
+    "data-tooltip",
+    "Fechar cadastro de empresa para Bia Teste",
+  );
+  expect(closeButton.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+    "▴",
+  );
   fireEvent.change(screen.getByLabelText("Empresa *"), {
     target: { value: " " },
   });
@@ -207,7 +220,7 @@ it("cadastra empresa inline, valida nome e atribui todas as linhas preservando s
 it("oferece empresa existente sem criar outra", async () => {
   await setup();
   fireEvent.click(
-    screen.getAllByRole("button", { name: "Cadastrar empresa" })[0],
+    screen.getAllByRole("button", { name: /^Cadastrar empresa para / })[0],
   );
   fireEvent.change(screen.getByLabelText("Empresa *"), {
     target: { value: "Empresa Alfa" },
@@ -231,9 +244,26 @@ it("envia somente selecionadas e mostra resumo", async () => {
     "href",
     "/contatos",
   );
-  expect(screen.getByRole("link", { name: "Ver contato →" })).toHaveAttribute(
+  expect(
+    screen.getByRole("link", { name: "Ver contato importado" }),
+  ).toHaveAttribute(
     "href",
     "/contatos/contact-imported?returnTo=%2Fcontatos%2Fimportar",
+  );
+  const importedLink = screen.getByRole("link", {
+    name: "Ver contato importado",
+  });
+  expect(importedLink).toHaveClass("row-action");
+  expect(importedLink).toHaveAttribute(
+    "data-tooltip",
+    "Ver contato importado",
+  );
+  expect(importedLink.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+    "↗",
+  );
+  expect(importedLink.closest(".linkedin-import-actions")).toHaveAttribute(
+    "role",
+    "cell",
   );
   const call = fetchMock.mock.calls.find(
     ([url]) => url === "/api/contacts/import",

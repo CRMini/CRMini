@@ -14,6 +14,7 @@ import EmptyState from "@/components/empty-state";
 import LinkedInCompanyEditor, {
   type CompanyDraft,
 } from "@/components/linkedin-company-editor";
+import { RowActionButton, RowActionLink } from "@/components/row-action";
 import { formatBrazilDate } from "@/lib/brazil-date";
 import { matchesSearch } from "@/lib/search-match";
 import {
@@ -883,21 +884,27 @@ export default function LinkedInImportView() {
                       </div>
                       <div role="cell" className="linkedin-import-actions">
                         {importedContactId && (
-                          <Link
-                            className="text-link"
+                          <RowActionLink
                             href={contactDetailHref(importedContactId)}
+                            icon="↗"
+                            label="Ver contato importado"
                             onClick={persistDraft}
-                          >
-                            Ver contato →
-                          </Link>
+                          />
                         )}
                         {canRegisterCompany && (
-                          <button
-                            type="button"
-                            className="text-link linkedin-import-action"
+                          <RowActionButton
+                            icon={
+                              company?.rowId === row.rowId ? "▴" : "＋"
+                            }
+                            text="Empresa"
+                            label={
+                              company?.rowId === row.rowId
+                                ? `Fechar cadastro de empresa para ${row.fullName || `linha ${row.rowId}`}`
+                                : `Cadastrar empresa para ${row.fullName || `linha ${row.rowId}`}`
+                            }
                             disabled={importing || saving}
-                            aria-expanded={company?.rowId === row.rowId}
-                            aria-controls={
+                            ariaExpanded={company?.rowId === row.rowId}
+                            ariaControls={
                               company?.rowId === row.rowId
                                 ? `linkedin-company-editor-${row.rowId}`
                                 : undefined
@@ -918,12 +925,7 @@ export default function LinkedInImportView() {
                               setCompanyError("");
                               setNameError("");
                             }}
-                          >
-                            <span aria-hidden="true">＋</span>
-                            {company?.rowId === row.rowId
-                              ? "Fechar cadastro"
-                              : "Cadastrar empresa"}
-                          </button>
+                          />
                         )}
                       </div>
                     </div>

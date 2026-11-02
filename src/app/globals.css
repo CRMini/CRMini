@@ -2175,9 +2175,10 @@ main.records-page .records-header-actions {
 .linkedin-import-profile { justify-self: start; }
 .linkedin-import-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 .linkedin-import-action {
   display: inline-flex;
