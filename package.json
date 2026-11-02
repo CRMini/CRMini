@@ -1,6 +1,6 @@
 {
   "name": "crmini",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "CRM local para organizar empresas clientes, contatos, oportunidades e tarefas.",
   "productName": "CRMini",
   "main": "electron/main.cjs",
