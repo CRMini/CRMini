@@ -3043,3 +3043,117 @@ main.records-page .text-button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Ações de linha das listagens: pictograma com tooltip no hover e no foco. */
+main.records-page .row-action {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #dfe4dd;
+  border-radius: 5px;
+  background: #fff;
+  color: #555e55;
+  font:
+    13px "DM Sans",
+    sans-serif;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+main.records-page .row-action:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+main.records-page .row-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+main.records-page .row-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+main.records-page .row-action--danger:hover {
+  border-color: #a33;
+  background: #fff2f2;
+  color: #a33;
+}
+main.records-page .row-action--danger:focus-visible {
+  outline-color: #a33;
+}
+/* Variante com texto curto: usada quando o pictograma sozinho não deixa claro
+   o objeto da ação (ex.: "＋ Empresa" na importação de contatos). */
+main.records-page .row-action--labeled {
+  display: inline-flex;
+  gap: 5px;
+  width: auto;
+  padding: 0 9px 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+main.records-page .row-action--labeled [aria-hidden="true"] {
+  font-size: 13px;
+}
+main.records-page .row-action--labeled .row-action-text {
+  white-space: nowrap;
+}
+/* O tooltip fica à esquerda do botão para não ser cortado pelo overflow da lista. */
+main.records-page .row-action::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  z-index: 3;
+  max-width: 220px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: #fff;
+  font:
+    500 10px/1.3 "DM Sans",
+    sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+main.records-page .row-action:hover::after,
+main.records-page .row-action:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+@media (max-width: 900px) {
+  /* Em telas estreitas as ações de contato vão para a esquerda da linha. */
+  main.records-page .contact-row-actions .row-action::after {
+    right: auto;
+    left: calc(100% + 8px);
+  }
+}
+@media (max-width: 600px) {
+  main.records-page .row-action {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+  main.records-page .row-action--labeled {
+    width: auto;
+    height: 38px;
+    padding: 0 11px 0 9px;
+    font-size: 11px;
+  }
+  main.records-page .row-action--labeled [aria-hidden="true"] {
+    font-size: 14px;
+  }
+  /* Sem hover em telas de toque: o nome da ação continua no aria-label. */
+  main.records-page .row-action::after {
+    display: none;
+  }
+}
