@@ -15,7 +15,8 @@ registrar conversas e acontecimentos relevantes:
 
 - ligados a um cliente, com ou sem oportunidade em andamento;
 - ligados a uma oportunidade específica;
-- e, em alguns casos, um evento é a **origem** de uma oportunidade.
+- e, em casos específicos, um evento poderia ser a **origem** de uma oportunidade
+  (capacidade descartada; ver §7).
 
 São, na prática, **duas superfícies da mesma feature**:
 
@@ -43,7 +44,7 @@ tarefa e evento no escopo.
 | D1 | Superfícies | Ficha do cliente **+** página de detalhe da oportunidade | **Confirmado** | Sem a página de detalhe, a timeline da oportunidade precisaria de expansão de linha/drawer (mais gambiarra de a11y e CSS) |
 | D2 | Granularidade da data | **Data civil** `YYYY-MM-DD` (`occurred_at`), ordenação com desempate por `created_at` | **Confirmado** | Data+hora exige `datetime-local`, conversão de fuso e instante ISO-8601 |
 | D3 | Tipos de evento | Lista fechada `reuniao`, `ligacao`, `email`, `mensagem`, `nota` | **Confirmado** | SQLite não altera `CHECK`: mudar depois exige recriar a tabela |
-| D4 | Edição/exclusão | Editar sim; excluir com **soft delete**; evento de origem não é excluível | Recomendado | Histórico imutável ou hard delete mudam endpoints e regras (só fase 4) |
+| D4 | Edição/exclusão | Editar sim; excluir com **soft delete**; evento de origem não é excluível | **Confirmado** | Histórico imutável ou hard delete mudam endpoints e regras |
 | D5 | Cardinalidade | Evento → no máximo **1** oportunidade; oportunidade → no máximo **1** evento de origem | Recomendado | N:N exigiria tabela de junção e “qual é a origem?” ficaria ambíguo |
 | D6 | Cliente inativo | **Permitir** registrar evento (histórico é retrospectivo) | Recomendado | Bloquear exigiria a mesma guarda de `createOpportunity` |
 | D7 | Data futura | **Rejeitar** `occurred_at` posterior a hoje em `America/Sao_Paulo` | Recomendado | Permitir futura confunde evento com tarefa |
@@ -101,8 +102,8 @@ Pontos que não podem ser esquecidos:
   SQLite), o que é exatamente o caso “evento só do cliente”.
 - **`ON DELETE RESTRICT`**, nunca `SET NULL` em FK composta: o SQLite tentaria
   anular também `client_id` (`NOT NULL`) e falharia.
-- **`is_origin`** é derivado do fluxo de conversão, não copiado de status da
-  oportunidade. Status (`Ganha`/`Perdida`) é lido ao vivo da oportunidade.
+- **`is_origin`** permanece no schema para compatibilidade; a conversão (F3) foi
+  descartada. Status (`Ganha`/`Perdida`) é lido ao vivo da oportunidade.
 - **`is_active`** só é usado pelo soft delete da fase 4; listagens filtram
   `is_active = 1`.
 - **Sem unicidade de conteúdo**: dois eventos iguais no mesmo dia são válidos.
@@ -132,10 +133,13 @@ Rotas com `export const runtime = "nodejs"` e `params` assíncronos
 |---|---|---|---|---|
 | `GET` | `/api/events?client_id=&opportunity_id=&type=&limit=` | timeline do cliente ou da oportunidade | `200` | `400` sem filtro/`type` inválido; `503` falha de leitura |
 | `POST` | `/api/events` | registrar evento | `201` | `400` validação/vínculo inválido |
-| `POST` | `/api/events/{id}/opportunity` | converter evento em oportunidade | `201 { opportunity, event }` | `404` evento; `409` já vinculado; `400` dados inválidos |
-| `PATCH` | `/api/events/{id}` | editar conteúdo (fase 4) | `200` | `400`/`404` |
-| `DELETE` | `/api/events/{id}` | soft delete (fase 4) | `204` | `409` evento de origem |
-| `GET` | `/api/opportunities/{id}` | detalhe da oportunidade (fase 3) | `200` | `404`/`503` |
+| `PATCH` | `/api/events/{id}` | editar conteúdo e vínculos permitidos | `200` | `400`/`404` |
+| `DELETE` | `/api/events/{id}` | soft delete | `204` | `409` evento de origem |
+| `GET` | `/api/opportunities/{id}` | detalhe da oportunidade (F2) | `200` | `404`/`503` |
+
+A rota de conversão `POST /api/events/{id}/opportunity` e a F3 foram **descartadas**.
+O campo `is_origin` e o índice parcial permanecem no schema por compatibilidade,
+sem fluxo de criação de origem.
 
 Regras de `POST /api/events`:
 
@@ -160,20 +164,12 @@ detalhes, `occurred_at` (data civil válida por round-trip, como em
 `contact_id`/`opportunity_id` (a integração entre clientes continua garantida
 pela FK composta).
 
-`POST /api/events/{id}/opportunity` (transação):
-
-1. carrega o evento ativo; ausente → `404`; já com `opportunity_id` → `409`;
-2. `client_id` vem **do evento** (corpo é ignorado), `contact_id` vem do corpo ou
-   do evento; contato ausente/inválido → `400`;
-3. valida os campos da oportunidade (extrair `validateOpportunityFields` da rota
-   de oportunidades para `src/lib/opportunity-validation.ts`, espelhando
-   `task-validation.ts`);
-4. insere a oportunidade e atualiza o evento (`opportunity_id`, `is_origin = 1`)
-   no mesmo `getDb().transaction(...)`; falha em qualquer passo → rollback total;
-5. devolve `201 { opportunity, event }` (a UI precisa do `id` novo para navegar).
-
-Preenchimento sugerido na conversão: `name` padrão = `title` do evento (editável),
-`opened_at` = hoje, `customer_need`/`notes` podem receber `details`.
+O `PATCH` carrega o evento ativo, mescla apenas os campos editáveis
+(`event_type`, `title`, `details`, `occurred_at`, `contact_id`,
+`opportunity_id`) e revalida o resultado. `client_id` e `is_origin` são
+imutáveis; em evento de origem a oportunidade não pode ser trocada. O `DELETE`
+faz soft delete; evento de origem retorna `409` e um evento já inativo retorna
+`204` de forma idempotente.
 
 ## 6. UI/UX
 
@@ -260,11 +256,12 @@ Comportamento:
 Reuso: extrair o `Field` local de `client-form.tsx` para
 `src/components/form-field.tsx` (mudança mecânica; evita duplicar a11y).
 
-Ação de origem: em evento sem `opportunity_id`, um `text-link` abre um
-mini-formulário inline (nome obrigatório, contato pré-selecionado, valor/moeda
-opcionais) que chama `POST /api/events/{id}/opportunity`. Alternativa
-`/oportunidades/nova?event_id=…` foi descartada: exigiria pré-preencher e desviar
-o submit do formulário atual.
+A conversão de evento em oportunidade (F3) foi descartada. O selo de origem
+permanece para dados existentes, mas não há ação de promoção na timeline.
+
+Na F4, cada item do histórico ganhou **Editar** (formulário inline preenchido,
+com `PATCH`) e **Excluir** (confirmação + soft delete); eventos de origem não
+exibem “Excluir”.
 
 CSS: bloco novo em `globals.css` escopado em `main.records-page`, usando apenas
 tokens existentes; sem biblioteca e sem `style={{}}`.
@@ -276,8 +273,8 @@ tokens existentes; sem biblioteca e sem `style={{}}`.
 | **F0. Fundação** | `init.sql` + `003_events.sql` + índice único em `opportunities`; `events.ts` (`listEvents`, `getEvent`, `createEvent`); `event-validation.ts`; `POST/GET /api/events`; atualizar `db.test.ts`/`db-resources.test.ts` e `README.md`; testes de repositório e rota | M | Baixo | — | ✅ concluída |
 | **F1. Detalhe do cliente** | `ClientDetail` em `/clientes/[id]` (resumo + contatos + histórico), `ClientForm` movido para `/clientes/[id]/editar`, `EventTimeline`, `form-field.tsx`, link/breadcrumbs, CSS, testes | M | Baixo | F0 | ✅ concluída |
 | **F2. Timeline da oportunidade** | `GET /api/opportunities/{id}`, `/oportunidades/[id]`, `/oportunidades/[id]/editar`, `opportunity-detail`, linha clicável e coluna de ações, testes | G | Médio | F0, F1 | ✅ concluída |
-| **F3. Origem (conversão)** | `createOpportunityFromEvent` (transação), `POST /api/events/{id}/opportunity`, `opportunity-validation.ts`, mini-formulário, testes de rollback | M | **Alto** | F0, F1 | pendente |
-| **F4. Ciclo de vida** | `PATCH`/`DELETE` de evento, filtros, limite/paginação | M | Baixo | F0 | pendente |
+| **F3. Origem (conversão)** | Descartada por decisão de produto | — | — | — | ❌ descartada |
+| **F4. Ciclo de vida** | `PATCH`/`DELETE` de evento, edição inline, soft delete, bloqueio de origem, testes | M | Baixo | F0 | ✅ concluída |
 
 Prioridade confirmada:
 
@@ -286,18 +283,11 @@ Prioridade confirmada:
    as próximas fases.
 2. **F2 (P1)** — a segunda superfície. É a fase de maior esforço porque inclui
    uma tela nova, mas também corrige a ausência atual de detalhe da oportunidade.
-3. **F3 (P1)** — fecha o ciclo “conversa → oportunidade” e é o fluxo de maior
-   risco (transação + dois módulos). Depende de F0/F1, não de F2.
-4. **F4 (P2)** — conveniência e manutenção; pode esperar uso real para definir
-   paginação e filtros.
+3. **F4 (P1)** — edição e exclusão lógica dos eventos, com proteção do evento
+   de origem. É a manutenção do histórico já existente.
 
-F0–F2 concluídas; as próximas são **F3 (origem/conversão)** e **F4 (ciclo de vida)**.
-
-As fases continuam independentes entre si (só compartilham F0/F1): se a
-prioridade mudar, F2 e F3 podem ser invertidas sem retrabalho de schema.
-
-Por que não começar pela conversão: ela é a parte mais arriscada e depende de um
-histórico já existente para ser exercitada. F1 dá base e feedback de uso antes.
+F0–F2 e F4 concluídas; **F3 descartada**. A paginação por cursor fica como
+evolução posterior, se o volume justificar.
 
 ## 8. Testes e validação
 
@@ -351,7 +341,7 @@ Obrigatórios pela AGENTS.md (`npm test`, `npm run coverage`, `npm run lint`,
 - **Sem autoria**: não há usuários no sistema; “quem registrou” não é rastreável
   e não entra no escopo.
 - **Crescimento da timeline**: `LIMIT 50` (máx. 100) no MVP; paginação por
-  cursor fica para F4.
+  cursor fica como evolução posterior.
 - **README**: a feature anterior atualizou a lista de features, de rotas e a
   seção de comportamento. F0 deve acrescentar o histórico de eventos e
   `/api/events`; caso contrário a documentação diverge do código.
@@ -373,12 +363,12 @@ edição em massa e importação de histórico existente.
 
 ## 11. Pendências (com recomendação)
 
-Resolvido: superfícies (cliente + detalhe da oportunidade), F2 antes de F3, data
+Resolvido: superfícies (cliente + detalhe da oportunidade), F3 descartada, data
 civil e lista de 5 tipos. Restam apenas decisões de validação/ciclo de vida; o
 schema não muda por causa delas.
 
-1. **Editar/excluir** — (recomendado) editar sim, soft delete sim, evento de
-   origem indeletável; alternativa: histórico imutável (append-only).
+1. **Editar/excluir** — resolvido na F4: editar sim, soft delete sim, evento de
+   origem indeletável.
 2. **Cliente inativo** — (recomendado) permitir registrar evento; alternativa:
    bloquear como em oportunidades/tarefas.
 3. **Data futura** — (recomendado) rejeitar; alternativa: permitir para registrar
