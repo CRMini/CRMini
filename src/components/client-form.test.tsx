@@ -141,6 +141,42 @@ describe("ClientForm — campo Site", () => {
     expect(body.website).toBe("example.com");
   });
 
+  it("salva o cliente sem exigir contato", async () => {
+    const fetchMock = mockFetch();
+    render(<ClientForm />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: /Razão social/ }), {
+      target: { value: "Aurora Tecnologia" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cliente" }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/clients",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.company_name).toBe("Aurora Tecnologia");
+    expect(body.contacts).toEqual([]);
+  });
+
+  it("não marca o nome do contato como obrigatório", () => {
+    render(<ClientForm />);
+
+    expect(
+      screen.getByRole("textbox", { name: "Nome completo" }),
+    ).not.toBeRequired();
+    expect(
+      screen.queryByRole("textbox", { name: /Nome completo \*/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Opcional: adicione pessoas de contato/),
+    ).toBeInTheDocument();
+  });
+
   it("aceita site vazio como campo opcional e o envia ao salvar", async () => {
     const fetchMock = mockFetch();
     render(<ClientForm />);

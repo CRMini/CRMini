@@ -411,7 +411,7 @@ export default function ClientForm({ id }: { id?: string }) {
           <p className="eyebrow">CADASTRO</p>
           <h1>{id ? "Editar cliente" : "Novo cliente"}</h1>
           <p className="subheading">
-            Cadastre os dados da empresa e seus contatos.
+            Cadastre os dados da empresa e, se quiser, seus contatos.
           </p>
         </div>
       </header>
@@ -684,7 +684,9 @@ export default function ClientForm({ id }: { id?: string }) {
           <div className="form-section-heading">
             <div>
               <h2>Pessoas de contato</h2>
-              <p>Adicione uma ou mais pessoas relacionadas a esta empresa.</p>
+              <p>
+                Opcional: adicione pessoas de contato desta empresa.
+              </p>
             </div>
             <button
               type="button"
@@ -724,9 +726,8 @@ export default function ClientForm({ id }: { id?: string }) {
               </div>
               <div className="form-grid">
                 <Field
-                  label="Nome completo *"
+                  label="Nome completo"
                   value={contact.full_name}
-                  required={index === 0}
                   onChange={(v) => updateContact(index, "full_name", v)}
                 />
                 <Field
