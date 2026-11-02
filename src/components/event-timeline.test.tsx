@@ -104,6 +104,9 @@ describe("EventTimeline — lista", () => {
     const item = screen.getByRole("listitem");
     expect(within(item).getByText("Reunião")).toBeInTheDocument();
     expect(within(item).getByText("Origem da oportunidade")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Excluir" }),
+    ).not.toBeInTheDocument();
     expect(within(item).getByText("Contato: Ana Souza")).toBeInTheDocument();
     expect(within(item).getByText("Oportunidade: Projeto Aurora")).toBeInTheDocument();
     expect(within(item).getByText("Conversa sobre o projeto")).toBeInTheDocument();
@@ -348,6 +351,86 @@ describe("EventTimeline — formulário", () => {
       client_id: "client-1",
       opportunity_id: "opp-1",
     });
+  });
+
+  it("edita um evento existente", async () => {
+    let patched: Record<string, unknown> | null = null;
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url.startsWith("/api/opportunities")) return jsonResponse([]);
+        if (url === "/api/events/event-1" && init?.method === "PATCH") {
+          patched = JSON.parse(init.body as string);
+          return jsonResponse({ id: "event-1" });
+        }
+        return jsonResponse([baseEvent]);
+      });
+
+    render(<EventTimeline clientId="client-1" contacts={contacts} />);
+    await screen.findByText("Reunião inicial");
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Editar evento" }),
+    ).toBeInTheDocument();
+    const title = screen.getByRole("textbox", { name: /Título/ });
+    expect(title).toHaveValue("Reunião inicial");
+
+    fireEvent.change(title, { target: { value: "Reunião revisada" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar evento" }));
+
+    await waitFor(() => expect(patched).not.toBeNull());
+    expect(patched).toMatchObject({
+      client_id: "client-1",
+      title: "Reunião revisada",
+      event_type: "reuniao",
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Editar evento" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          String(url) === "/api/events/event-1" && init?.method === "PATCH",
+      ),
+    ).toBe(true);
+  });
+
+  it("exclui um evento após confirmação", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    let deleted = false;
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url.startsWith("/api/opportunities")) return jsonResponse([]);
+        if (url === "/api/events/event-1" && init?.method === "DELETE") {
+          deleted = true;
+          return { ok: true, status: 204, json: async () => ({}) } as Response;
+        }
+        return jsonResponse(deleted ? [] : [baseEvent]);
+      });
+
+    render(<EventTimeline clientId="client-1" contacts={contacts} />);
+    await screen.findByText("Reunião inicial");
+
+    fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+
+    await waitFor(() => expect(deleted).toBe(true));
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Excluir este evento? O histórico será preservado.",
+    );
+    await screen.findByRole("heading", { name: "Nenhum evento registrado" });
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          String(url) === "/api/events/event-1" && init?.method === "DELETE",
+      ),
+    ).toBe(true);
   });
 
   it("mostra o título antes do tipo no mesmo formulário", async () => {

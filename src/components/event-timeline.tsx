@@ -59,6 +59,8 @@ export default function EventTimeline({
   const [error, setError] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContactName, setEditingContactName] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<{
     title?: string;
@@ -125,6 +127,69 @@ export default function EventTimeline({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function toggleForm() {
+    if (showForm) {
+      setEditingId(null);
+      setForm(emptyForm());
+      setFieldErrors({});
+      setFormError("");
+    }
+    setShowForm((current) => !current);
+  }
+
+  function startEdit(event: TimelineEvent) {
+    setEditingId(event.id);
+    setEditingContactName(event.contact_name ?? "");
+    setForm({
+      event_type: event.event_type,
+      title: event.title,
+      details: event.details ?? "",
+      occurred_at: event.occurred_at,
+      opportunity_id: event.opportunity_id ?? "",
+      contact_id: event.contact_id ?? "",
+    });
+    setFieldErrors({});
+    setFormError("");
+    setShowForm(true);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditingContactName("");
+    setForm(emptyForm());
+    setFieldErrors({});
+    setFormError("");
+    setShowForm(false);
+  }
+
+  async function remove(event: TimelineEvent) {
+    if (
+      !window.confirm("Excluir este evento? O histórico será preservado.")
+    ) {
+      return;
+    }
+    setError("");
+    try {
+      const response = await fetch(`/api/events/${event.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(
+          result?.error || "Não foi possível excluir o evento.",
+        );
+      }
+      if (editingId === event.id) cancelEdit();
+      await load();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível excluir o evento.",
+      );
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -144,37 +209,50 @@ export default function EventTimeline({
 
     setSaving(true);
 
+    const editing = Boolean(editingId);
+
     try {
-      const response = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: clientId,
-          event_type: form.event_type,
-          title: form.title,
-          details: form.details,
-          occurred_at: form.occurred_at,
-          opportunity_id: lockOpportunity
-            ? opportunityId ?? null
-            : form.opportunity_id || null,
-          contact_id: form.contact_id || null,
-        }),
-      });
+      const response = await fetch(
+        editing ? `/api/events/${editingId}` : "/api/events",
+        {
+          method: editing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: clientId,
+            event_type: form.event_type,
+            title: form.title,
+            details: form.details,
+            occurred_at: form.occurred_at,
+            opportunity_id: lockOpportunity
+              ? opportunityId ?? null
+              : form.opportunity_id || null,
+            contact_id: form.contact_id || null,
+          }),
+        },
+      );
       const result = await response.json();
       if (!response.ok) {
         throw new Error(
-          result.error || "Não foi possível registrar o evento.",
+          result.error ||
+            (editing
+              ? "Não foi possível salvar o evento."
+              : "Não foi possível registrar o evento."),
         );
       }
 
       setForm(emptyForm());
       setFieldErrors({});
+      setEditingId(null);
+      setEditingContactName("");
+      if (editing) setShowForm(false);
       await load();
     } catch (reason) {
       setFormError(
         reason instanceof Error
           ? reason.message
-          : "Não foi possível registrar o evento.",
+          : editing
+            ? "Não foi possível salvar o evento."
+            : "Não foi possível registrar o evento.",
       );
     } finally {
       setSaving(false);
@@ -224,6 +302,9 @@ export default function EventTimeline({
 
       {showForm && (
         <form id={formId} className="event-form" onSubmit={submit} noValidate>
+          <h3 className="event-form-title">
+            {editingId ? "Editar evento" : "Novo evento"}
+          </h3>
           <div className="form-grid">
             <Field
               label="Título *"
@@ -293,6 +374,15 @@ export default function EventTimeline({
                 }
               >
                 <option value="">— sem contato —</option>
+                {editingId &&
+                  form.contact_id &&
+                  !contacts.some(
+                    (contact) => contact.id === form.contact_id,
+                  ) && (
+                    <option value={form.contact_id}>
+                      {editingContactName || "Contato atual"} (inativo)
+                    </option>
+                  )}
                 {contacts.map((contact) => (
                   <option key={contact.id} value={contact.id}>
                     {contact.full_name}
@@ -310,8 +400,23 @@ export default function EventTimeline({
             </p>
           )}
           <div className="event-form-actions">
+            {editingId && (
+              <button
+                type="button"
+                className="subtle-button"
+                onClick={cancelEdit}
+              >
+                Cancelar
+              </button>
+            )}
             <button className="primary-button" disabled={saving}>
-              {saving ? "Registrando..." : "Registrar evento"}
+              {saving
+                ? editingId
+                  ? "Salvando..."
+                  : "Registrando..."
+                : editingId
+                  ? "Salvar evento"
+                  : "Registrar evento"}
             </button>
           </div>
         </form>
@@ -361,6 +466,24 @@ export default function EventTimeline({
                   )}
                 </div>
               )}
+              <div className="event-item-actions">
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => startEdit(event)}
+                >
+                  Editar
+                </button>
+                {!event.is_origin && (
+                  <button
+                    type="button"
+                    className="text-button danger-link"
+                    onClick={() => void remove(event)}
+                  >
+                    Excluir
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ol>

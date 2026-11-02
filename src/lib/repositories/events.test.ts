@@ -7,7 +7,13 @@ vi.hoisted(() => {
 import { getBrazilDateString } from "@/lib/brazil-date";
 import { getDb } from "@/lib/db";
 import { createClient, deactivateClient } from "./clients";
-import { createEvent, getEvent, listEvents } from "./events";
+import {
+  createEvent,
+  deactivateEvent,
+  getEvent,
+  listEvents,
+  updateEvent,
+} from "./events";
 import { createOpportunity } from "./opportunities";
 
 function cleanTables() {
@@ -259,5 +265,101 @@ describe("getEvent", () => {
       is_origin: true,
     });
     expect(await getEvent("00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+});
+
+describe("updateEvent", () => {
+  it("atualiza conteúdo e normaliza detalhes vazios", async () => {
+    const created = (await createEvent(baseEvent())) as Record<string, any>;
+
+    const updated = await updateEvent(created.id, {
+      ...baseEvent(),
+      event_type: "email",
+      title: "  Retorno do cliente  ",
+      details: "  ",
+      occurred_at: "2026-10-02",
+      contact_id: null,
+      opportunity_id: null,
+    });
+
+    expect(updated).toMatchObject({
+      id: created.id,
+      event_type: "email",
+      title: "Retorno do cliente",
+      details: null,
+      occurred_at: "2026-10-02",
+      contact_id: null,
+      opportunity_id: null,
+    });
+  });
+
+  it("rejeita contato ou oportunidade de outro cliente", async () => {
+    const created = (await createEvent(baseEvent())) as Record<string, any>;
+
+    expect(
+      await updateEvent(created.id, {
+        ...baseEvent(),
+        contact_id: otherContactId,
+      }),
+    ).toBeNull();
+    expect(
+      await updateEvent(created.id, {
+        ...baseEvent(),
+        opportunity_id: otherOpportunityId,
+      }),
+    ).toBeNull();
+  });
+
+  it("não atualiza evento inativo", async () => {
+    const created = (await createEvent(baseEvent())) as Record<string, any>;
+    await deactivateEvent(created.id);
+
+    expect(
+      await updateEvent(created.id, { ...baseEvent(), title: "Depois" }),
+    ).toBeNull();
+  });
+
+  it("mantém a oportunidade do evento de origem", async () => {
+    const created = (await createEvent(baseEvent())) as Record<string, any>;
+    getDb()
+      .prepare("UPDATE events SET is_origin = 1 WHERE id = ?")
+      .run(created.id);
+
+    expect(
+      await updateEvent(created.id, {
+        ...baseEvent(),
+        opportunity_id: null,
+      }),
+    ).toBeNull();
+
+    expect(
+      await updateEvent(created.id, {
+        ...baseEvent(),
+        title: "Origem revisada",
+      }),
+    ).toMatchObject({ title: "Origem revisada", is_origin: true });
+  });
+});
+
+describe("deactivateEvent", () => {
+  it("faz exclusão lógica e remove o evento da listagem", async () => {
+    const created = (await createEvent(baseEvent())) as Record<string, any>;
+
+    expect(await deactivateEvent(created.id)).not.toBeNull();
+
+    expect(
+      (await listEvents({ clientId })).some((event) => event.id === created.id),
+    ).toBe(false);
+    expect((await getEvent(created.id))?.is_active).toBe(0);
+  });
+
+  it("não desativa evento de origem", async () => {
+    const created = (await createEvent(baseEvent())) as Record<string, any>;
+    getDb()
+      .prepare("UPDATE events SET is_origin = 1 WHERE id = ?")
+      .run(created.id);
+
+    expect(await deactivateEvent(created.id)).toBeNull();
+    expect((await getEvent(created.id))?.is_active).toBe(1);
   });
 });

@@ -101,3 +101,56 @@ export async function createEvent(
     }) as Record<string, any> | undefined;
   return row ? mapEventRow(row) : null;
 }
+
+export async function updateEvent(
+  id: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, any> | null> {
+  const details =
+    typeof body.details === "string" && body.details.trim()
+      ? body.details
+      : null;
+  const row = getDb()
+    .prepare(
+      `UPDATE events SET event_type = @event_type, title = @title,
+        details = @details, occurred_at = @occurred_at,
+        contact_id = @contact_id, opportunity_id = @opportunity_id,
+        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE id = @id AND is_active = 1 AND client_id = @client_id
+       AND (@contact_id IS NULL OR EXISTS (
+         SELECT 1 FROM contacts p
+         WHERE p.id = @contact_id AND p.client_id = @client_id
+       ))
+       AND (@opportunity_id IS NULL OR EXISTS (
+         SELECT 1 FROM opportunities o
+         WHERE o.id = @opportunity_id AND o.client_id = @client_id
+       ))
+       AND (is_origin = 0 OR opportunity_id = @opportunity_id)
+       RETURNING *`,
+    )
+    .get({
+      id,
+      client_id: body.client_id,
+      event_type: body.event_type,
+      title: String(body.title ?? "").trim(),
+      details,
+      occurred_at: body.occurred_at,
+      contact_id: body.contact_id || null,
+      opportunity_id: body.opportunity_id || null,
+    }) as Record<string, any> | undefined;
+  return row ? mapEventRow(row) : null;
+}
+
+export async function deactivateEvent(
+  id: string,
+): Promise<Record<string, any> | null> {
+  const row = getDb()
+    .prepare(
+      `UPDATE events SET is_active = 0,
+        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+       WHERE id = @id AND is_active = 1 AND is_origin = 0
+       RETURNING id`,
+    )
+    .get({ id }) as Record<string, any> | undefined;
+  return row ?? null;
+}
