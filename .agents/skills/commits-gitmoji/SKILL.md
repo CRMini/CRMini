@@ -22,6 +22,7 @@ Exemplos:
 
 ## Regras
 
+- NUNCA faça o commit antes de o usuário validar a implementação; apenas prepare e sugira a mensagem e aguarde o aval explícito.
 - Escreva toda a mensagem em português, inclusive o corpo, se houver. Preserve nomes próprios, identificadores e termos técnicos que não tenham tradução natural.
 - Comece com um único Gitmoji adequado à mudança, seguido de um espaço.
 - Descreva a mudança de forma clara, concisa e específica; prefira verbo no presente do indicativo (por exemplo, `Adiciona`, `Corrige`, `Atualiza`).

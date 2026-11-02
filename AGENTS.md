@@ -50,3 +50,11 @@
 - Prefira mudanças locais, simples e consistentes com os padrões existentes; evite refatorações não relacionadas.
 - Não instale dependências nem faça alterações no sistema fora do repositório sem autorização.
 - Atualize `README.md` quando mudar comandos de execução, configuração, migrations ou procedimentos relevantes para quem desenvolve o projeto.
+
+## Commits
+
+- NUNCA crie commits, tags, `git push` ou publique releases por conta própria, mesmo com a implementação concluída e todas as validações verdes.
+- Conclua a implementação, relate os comandos executados e o estado dos testes e, em seguida, aguarde a validação explícita do usuário (por exemplo, "validado", "pode commitar").
+- Se o usuário pedir a mensagem de commit antes da validação, apenas sugira o texto; só execute o commit depois do aval explícito.
+- Depois do aval, siga o padrão de mensagens descrito em `.agents/skills/commits-gitmoji/SKILL.md`.
+
