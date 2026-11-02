@@ -284,6 +284,14 @@ it.each(["url", "email"])("bloqueia duplicata forte por %s", async (key) => {
     "/contatos/existing?returnTo=%2Fcontatos%2Fimportar",
   );
 });
+it("mostra a empresa vinculada uma única vez na linha", async () => {
+  await setup();
+  const anaRow = screen
+    .getAllByRole("row")
+    .find((row) => within(row).queryByText("Ana Exemplo"));
+  expect(anaRow).toBeDefined();
+  expect(within(anaRow!).getAllByText("Empresa Alfa")).toHaveLength(1);
+});
 it("avisa sobre contato inativo sem bloquear", async () => {
   contacts = [
     {

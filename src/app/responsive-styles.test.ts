@@ -372,6 +372,64 @@ describe("Responsividade dos estilos globais", () => {
     ).toBe(true);
   });
 
+  it("mantém a linha da importação do LinkedIn compacta e sem rolagem horizontal", () => {
+    // A grade de seis colunas não cabia em 1024px e a coluna LinkedIn ficava
+    // inacessível; a linha agora usa larguras flexíveis e, abaixo de 900px,
+    // reorganiza o conteúdo em faixas.
+    const row = cleanTopBlocks.find(
+      (block) => normalize(block.prelude) === ".linkedin-import-table-row",
+    );
+    expect(row, "regra base da linha ausente").toBeDefined();
+    expect(value(row!.body, "min-height")).toBe("72px");
+
+    const shared = cleanTopBlocks.find(
+      (block) =>
+        selectorParts(block.prelude).includes(".linkedin-import-table-header") &&
+        selectorParts(block.prelude).includes(".linkedin-import-table-row"),
+    );
+    expect(shared, "grade compartilhada ausente").toBeDefined();
+    expect(shared!.body).not.toContain("min-width");
+
+    const wide = value(shared!.body, "grid-template-columns") ?? "";
+    expect(gridTrackCount(wide)).toBe(6);
+    expect(wide).toContain("minmax(0, 1.6fr)");
+    expect(wide).not.toContain("minmax(120px");
+
+    const stacked = ruleInMedia(
+      "(max-width: 1100px)",
+      ".linkedin-import-table-row",
+    );
+    expect(value(stacked.body, "grid-template-columns")).toBe(
+      "20px minmax(0, 1fr) auto",
+    );
+    expect(value(stacked.body, "grid-template-areas")).toContain("identity");
+
+    const header = ruleInMedia(
+      "(max-width: 1100px)",
+      ".linkedin-import-table-header",
+    );
+    expect(value(header.body, "display")).toBe("none");
+
+    // A grade fixa de 850px obrigava rolagem horizontal e escondia a coluna
+    // LinkedIn em janelas de 1024px.
+    const tableRules = mediaBodies("(max-width: 1100px)")
+      .flatMap((body) => topLevelBlocks(body))
+      .filter((rule) => rule.prelude.includes(".linkedin-import-table"));
+    expect(tableRules.map((rule) => value(rule.body, "overflow-x"))).not.toContain(
+      "auto",
+    );
+    expect(tableRules.map((rule) => value(rule.body, "min-width"))).not.toContain(
+      "850px",
+    );
+
+    const badge = cleanTopBlocks.find((block) =>
+      selectorParts(block.prelude).includes(".linkedin-import-badge"),
+    );
+    expect(badge, "regra do selo ausente").toBeDefined();
+    expect(value(badge!.body, "white-space")).toBe("nowrap");
+    expect(value(badge!.body, "text-overflow")).toBe("ellipsis");
+  });
+
   it("define os tokens de largura da barra lateral em :root", () => {
     const root = cleanTopBlocks.find(
       (block) => normalize(block.prelude) === ":root",
