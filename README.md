@@ -1,5 +1,9 @@
 # CRMini
 
+[![CI](https://github.com/CRMini/CRMini/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CRMini/CRMini/actions/workflows/ci.yml)
+[![Release](https://github.com/CRMini/CRMini/actions/workflows/release.yml/badge.svg)](https://github.com/CRMini/CRMini/actions/workflows/release.yml)
+[![Versão](https://img.shields.io/github/package-json/v/CRMini/CRMini?label=vers%C3%A3o)](https://github.com/CRMini/CRMini/releases)
+
 Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades e tarefas. Os dados são persistidos em um arquivo SQLite local; a interface permite acompanhar informações e atividades comerciais em um só lugar. O mesmo código roda no navegador (`npm run dev`) e em uma janela desktop com Electron.
 
 ## Funcionalidades
@@ -182,6 +186,12 @@ npm run build
 npm run prepare:standalone
 node .next/standalone/server.js
 ```
+
+### Integração contínua
+
+O workflow [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) roda em push para `main` e em pull requests, no Node.js 22: instala as dependências com `npm ci` e executa `npm run lint`, `npm run coverage` (testes + pisos de cobertura) e `npm run build`. Um push novo no mesmo ref cancela a execução anterior, e o relatório de `coverage/` é publicado como artefato `coverage-report` quando o job falha. `npm run format:check` ainda não é um gate do CI, porque há arquivos preexistentes fora do padrão do Prettier; a verificação continua local, antes do commit.
+
+O workflow [`.github/workflows/release.yml`](./.github/workflows/release.yml) também executa `npm run coverage` antes de empacotar os instaladores, então uma tag `vX.Y.Z` não publica release com teste ou cobertura falhando.
 
 ## Verificação de responsividade
 
