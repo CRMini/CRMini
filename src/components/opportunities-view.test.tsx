@@ -97,9 +97,25 @@ describe("Lista de oportunidades", () => {
     expect(
       screen.getByRole("link", { name: "Ver detalhes de Projeto Exemplo" }),
     ).toHaveAttribute("href", "/oportunidades/opportunity-1");
-    expect(
-      screen.getByRole("link", { name: "Editar" }),
-    ).toHaveAttribute("href", "/oportunidades/opportunity-1/editar");
+    const editAction = screen.getByRole("link", {
+      name: "Editar oportunidade Projeto Exemplo",
+    });
+    expect(editAction).toHaveAttribute(
+      "href",
+      "/oportunidades/opportunity-1/editar",
+    );
+    expect(editAction).toHaveClass("row-action");
+    expect(editAction).toHaveAttribute(
+      "data-tooltip",
+      "Editar oportunidade Projeto Exemplo",
+    );
+    expect(editAction.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+      "✎",
+    );
+    expect(editAction.closest(".opportunity-row-actions")).toHaveAttribute(
+      "data-label",
+      "Ações",
+    );
     expect(screen.getByText("1 oportunidade(s)")).toBeInTheDocument();
     expect(
       screen.getByRole("table", { name: "Lista de oportunidades" }),

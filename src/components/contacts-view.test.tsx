@@ -238,6 +238,56 @@ describe("Lista de contatos", () => {
     expect(secondEditLink.closest(".contact-name-line")).toBeNull();
   });
 
+  it("usa botões de pictograma com tooltip nas ações da linha", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      ok([
+        {
+          id: "contact-1",
+          full_name: "Pessoa Exemplo",
+          is_primary: true,
+          is_active: true,
+          client_id: "client-1",
+          company_name: "Empresa Alfa",
+        },
+      ]),
+    );
+
+    render(<ContactsView />);
+
+    const row = (await screen.findByText("Pessoa Exemplo")).closest(
+      ".contact-row",
+    ) as HTMLElement;
+    const editLink = within(row).getByRole("link", {
+      name: "Editar contato Pessoa Exemplo",
+    });
+    const deactivateButton = within(row).getByRole("button", {
+      name: "Desativar contato Pessoa Exemplo",
+    });
+
+    expect(editLink).toHaveClass("row-action");
+    expect(editLink).toHaveAttribute(
+      "data-tooltip",
+      "Editar contato Pessoa Exemplo",
+    );
+    expect(editLink.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+      "✎",
+    );
+
+    expect(deactivateButton).toHaveAttribute(
+      "class",
+      "row-action row-action--danger",
+    );
+    expect(deactivateButton).toHaveAttribute(
+      "data-tooltip",
+      "Desativar contato Pessoa Exemplo",
+    );
+    expect(
+      deactivateButton.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("⊘");
+    expect(editLink.closest(".contact-row-actions")).not.toBeNull();
+    expect(deactivateButton.closest(".contact-row-actions")).not.toBeNull();
+  });
+
   it("leva ao formulário de novo contato a partir do cabeçalho", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,

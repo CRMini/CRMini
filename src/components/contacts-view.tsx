@@ -4,6 +4,7 @@ import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import Image from "next/image";
 import EmptyState from "@/components/empty-state";
+import { RowActionButton, RowActionLink } from "@/components/row-action";
 import { useEffect, useState } from "react";
 import { formatBrazilDate } from "@/lib/brazil-date";
 import { CLIENT_SEGMENTS } from "@/lib/segments";
@@ -207,7 +208,19 @@ export default function ContactsView() {
                   in
                 </span>
               )}
-               <span className="contact-row-actions"><Link className="text-link" href={`/contatos/${contact.id}`} aria-label={`Editar contato ${contact.full_name}`}>Editar →</Link> <button className="filter-button" type="button" aria-label={`${contact.is_active ? "Desativar" : "Reativar"} contato ${contact.full_name}`} onClick={() => void changeActive(contact)}>{contact.is_active ? "Desativar" : "Reativar"}</button></span>
+              <span className="contact-row-actions">
+                <RowActionLink
+                  href={`/contatos/${contact.id}`}
+                  icon="✎"
+                  label={`Editar contato ${contact.full_name}`}
+                />
+                <RowActionButton
+                  icon={contact.is_active ? "⊘" : "↻"}
+                  tone={contact.is_active ? "danger" : "default"}
+                  label={`${contact.is_active ? "Desativar" : "Reativar"} contato ${contact.full_name}`}
+                  onClick={() => void changeActive(contact)}
+                />
+              </span>
             </article>
           ))}
         </div>

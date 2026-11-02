@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import EmptyState from "@/components/empty-state";
+import { RowActionLink } from "@/components/row-action";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { formatBrazilDate, getBrazilDateString } from "@/lib/brazil-date";
@@ -637,12 +638,11 @@ export default function OpportunitiesView({
                     role="cell"
                     data-label="Ações"
                   >
-                    <Link
-                      className="text-link"
+                    <RowActionLink
                       href={`/oportunidades/${o.id}/editar`}
-                    >
-                      Editar
-                    </Link>
+                      icon="✎"
+                      label={`Editar oportunidade ${o.name}`}
+                    />
                   </span>
                 </article>
               ))}

@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -94,6 +95,54 @@ describe("Lista de clientes", () => {
     expect(
       screen.queryByRole("heading", { name: "Nenhum cliente cadastrado" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("exibe as ações de linha com pictograma oculto e tooltip igual ao rótulo", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      ok([
+        {
+          id: "client-1",
+          company_name: "Empresa Alfa",
+          is_active: true,
+          contacts: [],
+        },
+      ]),
+    );
+
+    render(<ClientsView />);
+
+    const row = (await screen.findByText("Empresa Alfa")).closest(
+      ".client-row",
+    ) as HTMLElement;
+    const editLink = within(row).getByRole("link", {
+      name: "Editar cliente Empresa Alfa",
+    });
+    const deactivateButton = within(row).getByRole("button", {
+      name: "Desativar cliente Empresa Alfa",
+    });
+
+    expect(editLink).toHaveAttribute(
+      "data-tooltip",
+      "Editar cliente Empresa Alfa",
+    );
+    expect(editLink).toHaveClass("row-action");
+    expect(editLink.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+      "✎",
+    );
+
+    expect(deactivateButton).toHaveAttribute(
+      "data-tooltip",
+      "Desativar cliente Empresa Alfa",
+    );
+    expect(deactivateButton).toHaveAttribute(
+      "class",
+      "row-action row-action--danger",
+    );
+    expect(
+      deactivateButton.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("⊘");
+    expect(editLink.closest(".client-row-actions")).not.toBeNull();
+    expect(deactivateButton.closest(".client-row-actions")).not.toBeNull();
   });
 
   it("exibe o estado vazio quando a API responde sem clientes", async () => {

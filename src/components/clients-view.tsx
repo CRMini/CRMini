@@ -4,6 +4,7 @@ import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import Image from "next/image";
 import EmptyState from "@/components/empty-state";
+import { RowActionButton, RowActionLink } from "@/components/row-action";
 import { useEffect, useState } from "react";
 
 type Client = {
@@ -145,21 +146,18 @@ export default function ClientsView() {
                   aria-label={`Ver detalhes de ${client.company_name}`}
                 />
                 <span className="client-row-actions">
-                  <Link
-                    className="text-link"
+                  <RowActionLink
                     href={`/clientes/${client.id}/editar`}
-                    aria-label={`Editar cliente ${client.company_name}`}
-                  >
-                    Editar →
-                  </Link>
+                    icon="✎"
+                    label={`Editar cliente ${client.company_name}`}
+                  />
                   {client.is_active && (
-                    <button
-                      type="button"
-                      className="filter-button"
-                      onClick={() => deactivate(client.id)}
-                    >
-                      Desativar
-                    </button>
+                    <RowActionButton
+                      icon="⊘"
+                      tone="danger"
+                      label={`Desativar cliente ${client.company_name}`}
+                      onClick={() => void deactivate(client.id)}
+                    />
                   )}
                 </span>
               </article>
