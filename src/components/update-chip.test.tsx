@@ -508,6 +508,18 @@ function ruleBlock(selector: string, from = 0) {
   return css.slice(open + 1, close);
 }
 
+// Só as regras do chip entram na varredura de cores: o arquivo tem outros blocos
+// depois dele, e o teste não deve acusar cor de outra tela.
+function chipDeclarations() {
+  const blocks: string[] = [];
+  const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
+  let match: RegExpExecArray | null;
+  while ((match = rulePattern.exec(css))) {
+    if (match[1].includes(".update-chip")) blocks.push(match[2]);
+  }
+  return blocks.join("\n");
+}
+
 describe("Estilos do chip de atualização", () => {
   it("fixa o chip no canto superior direito", () => {
     const chip = ruleBlock(".update-chip {");
@@ -533,7 +545,7 @@ describe("Estilos do chip de atualização", () => {
   });
 
   it("não introduz cores fora dos tokens e hex consagrados", () => {
-    const block = css.slice(css.indexOf(".update-chip {"));
+    const block = chipDeclarations();
     const consagradas = new Set([
       "#fff",
       "#3986531c",
