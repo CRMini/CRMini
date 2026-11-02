@@ -105,7 +105,7 @@ describe("EventTimeline — lista", () => {
     expect(within(item).getByText("Reunião")).toBeInTheDocument();
     expect(within(item).getByText("Origem da oportunidade")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Excluir" }),
+      screen.queryByRole("button", { name: "Excluir evento" }),
     ).not.toBeInTheDocument();
     expect(within(item).getByText("Contato: Ana Souza")).toBeInTheDocument();
     expect(within(item).getByText("Oportunidade: Projeto Aurora")).toBeInTheDocument();
@@ -114,6 +114,43 @@ describe("EventTimeline — lista", () => {
       "dateTime",
       "2026-10-01",
     );
+  });
+
+  it("usa botões de pictograma com tooltip nas ações do histórico", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).startsWith("/api/opportunities"))
+        return jsonResponse([]);
+      return jsonResponse([baseEvent]);
+    });
+
+    render(<EventTimeline clientId="client-1" contacts={contacts} />);
+
+    const item = (await screen.findByText("Reunião inicial")).closest(
+      ".event-item",
+    ) as HTMLElement;
+    const editButton = within(item).getByRole("button", {
+      name: "Editar evento",
+    });
+    const removeButton = within(item).getByRole("button", {
+      name: "Excluir evento",
+    });
+
+    expect(editButton).toHaveClass("row-action");
+    expect(editButton).toHaveAttribute("data-tooltip", "Editar evento");
+    expect(editButton.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+      "✎",
+    );
+
+    expect(removeButton).toHaveAttribute(
+      "class",
+      "row-action row-action--danger",
+    );
+    expect(removeButton).toHaveAttribute("data-tooltip", "Excluir evento");
+    expect(
+      removeButton.querySelector('[aria-hidden="true"]'),
+    ).toHaveTextContent("✕");
+    expect(editButton.closest(".event-item-actions")).not.toBeNull();
+    expect(removeButton.closest(".event-item-actions")).not.toBeNull();
   });
 
   it("refaz a busca ao filtrar por tipo", async () => {
@@ -370,7 +407,7 @@ describe("EventTimeline — formulário", () => {
     render(<EventTimeline clientId="client-1" contacts={contacts} />);
     await screen.findByText("Reunião inicial");
 
-    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Editar evento" }));
 
     expect(
       screen.getByRole("heading", { name: "Editar evento" }),
@@ -418,7 +455,7 @@ describe("EventTimeline — formulário", () => {
     render(<EventTimeline clientId="client-1" contacts={contacts} />);
     await screen.findByText("Reunião inicial");
 
-    fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+    fireEvent.click(screen.getByRole("button", { name: "Excluir evento" }));
 
     await waitFor(() => expect(deleted).toBe(true));
     expect(window.confirm).toHaveBeenCalledWith(

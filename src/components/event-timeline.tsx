@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useId, useState } from "react";
 import EmptyState from "@/components/empty-state";
 import Field from "@/components/form-field";
+import { RowActionButton } from "@/components/row-action";
 import { formatBrazilDate, getBrazilDateString } from "@/lib/brazil-date";
 import { eventTypes, type EventType } from "@/lib/event-validation";
 
@@ -467,21 +468,18 @@ export default function EventTimeline({
                 </div>
               )}
               <div className="event-item-actions">
-                <button
-                  type="button"
-                  className="text-button"
+                <RowActionButton
+                  icon="✎"
+                  label="Editar evento"
                   onClick={() => startEdit(event)}
-                >
-                  Editar
-                </button>
+                />
                 {!event.is_origin && (
-                  <button
-                    type="button"
-                    className="text-button danger-link"
+                  <RowActionButton
+                    icon="✕"
+                    tone="danger"
+                    label="Excluir evento"
                     onClick={() => void remove(event)}
-                  >
-                    Excluir
-                  </button>
+                  />
                 )}
               </div>
             </li>
