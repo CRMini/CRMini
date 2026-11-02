@@ -10,7 +10,7 @@
 
 ## Regras de domínio observadas
 
-- Um cliente representa uma empresa; contatos pertencem a um cliente por `client_id`. Nome da empresa e nome do contato são obrigatórios. Outros campos, incluindo aniversário, são opcionais.
+- Um cliente representa uma empresa; contatos pertencem a um cliente por `client_id`. O nome da empresa é obrigatório e o cliente pode ser salvo sem contatos: contato é opcional e um cartão de contato sem nome não é persistido. Outros campos, incluindo aniversário, são opcionais.
 - Clientes são desativados (`is_active = false`) em vez de excluídos pela aplicação. Isso preserva o histórico; oportunidades e tarefas também restringem exclusões por suas relações.
 - Oportunidades devem apontar para um cliente e um contato daquele mesmo cliente. Os status válidos são `Em andamento`, `Desenvolvimento`, `Proposta`, `Aceite da proposta`, `Ganha` e `Perdida`. Uma oportunidade perdida exige motivo (`Preço`, `Prazo`, `Tecnologia` ou `Solução`); outros status não devem ter motivo de perda. Valores e horas de projeto não podem ser negativos.
 - Moedas aceitas no schema são `BRL`, `USD`, `EUR` e `PES`.

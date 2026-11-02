@@ -11,7 +11,7 @@ Use ao alterar fluxos, telas, endpoints ou dados de clientes e contatos.
 
 - Um cliente representa uma empresa; um contato pertence a um cliente por `client_id`.
 - Um cliente pode ter vários contatos. O schema define `contacts.client_id` como obrigatório e exclui os contatos em cascata quando o cliente é removido.
-- Nome da empresa e nome completo do contato são obrigatórios. Os demais campos, inclusive aniversário, são opcionais.
+- O nome da empresa é obrigatório e o cliente pode ser salvo sem contatos; contato é opcional e um cartão sem nome não é persistido. Os demais campos, inclusive aniversário, são opcionais.
 - O campo `is_primary` identifica um contato principal, mas o schema atual não garante que exista exatamente um por cliente.
 - Não assuma regras não implementadas, como unicidade de CNPJ/e-mail, obrigatoriedade de contato principal ou restrições de exclusão lógica.
 
