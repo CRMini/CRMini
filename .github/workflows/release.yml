@@ -33,6 +33,12 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      # `npm run coverage` roda a suíte e aplica os pisos de cobertura de
+      # `vitest.config.mts`. Fica antes do empacotamento (que é caro) para que
+      # uma tag com teste ou cobertura falhando não gere instalador publicado.
+      - name: Executar testes automatizados
+        run: npm run coverage
+
       # Falha antes do empacotamento (que é caro) se a tag não casar com a versão.
       - name: Conferir versão da tag
         if: startsWith(github.ref, 'refs/tags/v')

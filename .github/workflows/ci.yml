@@ -1,0 +1,69 @@
+name: CI
+
+# Verificação contínua de pushes em `main` e de pull requests: lint, testes com
+# piso de cobertura e build de produção. Antes disso, essas quebras só
+# apareciam no workflow de release, que empacota no Windows e é caro.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# O CI só lê o código; nenhum passo publica artefatos ou releases.
+permissions:
+  contents: read
+
+# Um push novo no mesmo ref cancela a execução anterior: validar o commit
+# obsoleto não agrega e consome minutos do runner.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          # O projeto exige Node.js 22.12+ (Electron 44 e Vitest 5); `cache: npm`
+          # reaproveita o download das dependências entre execuções.
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar lint
+        run: npm run lint
+
+      # `npm run coverage` roda a suíte inteira e aplica os pisos mínimos de
+      # cobertura de `vitest.config.mts`; abaixo deles o comando falha e o job
+      # fica vermelho, em vez de aceitar queda silenciosa de cobertura.
+      #
+      # `npm run format:check` fica fora do CI por enquanto: há arquivos
+      # preexistentes fora do padrão do Prettier, então o gate falharia em toda
+      # execução sem apontar regressão. A formatação continua sendo verificada
+      # localmente antes do commit.
+      - name: Executar testes com cobertura
+        run: npm run coverage
+
+      # O build é o mesmo (`output: "standalone"`) consumido pelo empacotamento
+      # desktop; quebrá-lo aqui é barato perto de descobrir o problema na release.
+      - name: Gerar build de produção
+        run: npm run build
+
+      # Publicado apenas em falha: o relatório de `coverage/` mostra qual arquivo
+      # ficou abaixo do piso. `if-no-files-found: ignore` evita um erro
+      # secundário quando a falha antecede a cobertura (ex.: lint).
+      - name: Publicar relatório de cobertura
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7
