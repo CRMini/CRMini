@@ -675,21 +675,15 @@ export default function LinkedInImportView() {
               aria-label="Conexões do LinkedIn"
             >
               <div className="linkedin-import-table-header" role="row">
-                {[
-                  "Seleção",
-                  "Nome / cargo",
-                  "Empresa",
-                  "Conectado em",
-                  "E-mail",
-                  "LinkedIn",
-                ].map((label) => (
-                  <span role="columnheader" key={label}>
-                    {label}
-                  </span>
-                ))}
+                <span role="columnheader" aria-label="Seleção" />
+                <span role="columnheader">Conexão</span>
+                <span role="columnheader">Empresa</span>
+                <span role="columnheader">Conectado em</span>
+                <span role="columnheader">LinkedIn</span>
+                <span role="columnheader">Ações</span>
               </div>
-              {visible.map(
-                ({
+              {visible.map((enriched) => {
+                const {
                   connection: row,
                   client,
                   active,
@@ -697,155 +691,182 @@ export default function LinkedInImportView() {
                   duplicate,
                   inactiveContact,
                   reason,
-                }) => (
+                } = enriched;
+                const needsCompanySelect =
+                  !row.company ||
+                  active.length > 1 ||
+                  (active.length === 0 && inactiveCompany);
+                const canRegisterCompany =
+                  !!row.company && !client && !active.length && !inactiveCompany;
+                const companyName = client
+                  ? client.company_name
+                  : row.company || "Empresa não informada";
+                const companyFromFile =
+                  client &&
+                  row.company &&
+                  normalizeCompanyKey(client.company_name) !==
+                    normalizeCompanyKey(row.company)
+                    ? row.company
+                    : null;
+                const importedContactId = importedContacts[row.rowId];
+                return (
                   <Fragment key={row.rowId}>
                     <div
                       className={`linkedin-import-table-row${company?.rowId === row.rowId ? " editing" : ""}`}
                       role="row"
                     >
-                      <div role="cell" data-label="Seleção">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(row.rowId)}
-                          disabled={!!reason || importing || saving}
-                          title={reason || `Selecionar ${row.fullName}`}
-                          aria-label={`Selecionar ${row.fullName || `linha ${row.rowId}`}${reason ? `: ${reason}` : ""}`}
-                          onChange={(event) =>
-                            setSelected((current) => {
-                              const next = new Set(current);
-                              if (event.target.checked) next.add(row.rowId);
-                              else next.delete(row.rowId);
-                              return next;
-                            })
-                          }
-                        />
+                      <div role="cell" className="linkedin-import-check">
+                        <label className="linkedin-import-select">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(row.rowId)}
+                            disabled={!!reason || importing || saving}
+                            title={reason || `Selecionar ${row.fullName}`}
+                            aria-label={`Selecionar ${row.fullName || `linha ${row.rowId}`}${reason ? `: ${reason}` : ""}`}
+                            onChange={(event) =>
+                              setSelected((current) => {
+                                const next = new Set(current);
+                                if (event.target.checked) next.add(row.rowId);
+                                else next.delete(row.rowId);
+                                return next;
+                              })
+                            }
+                          />
+                        </label>
                       </div>
-                      <div role="cell" data-label="Nome / cargo">
-                        <b>{row.fullName || "Nome não informado"}</b>
-                        <small>{row.jobTitle || "—"}</small>
-                        {row.issues.map((issue) => (
-                          <small key={issue.code}>{issue.message}</small>
-                        ))}
-                        {duplicate && (
-                          <Link
-                            className="linkedin-import-badge"
-                            href={contactDetailHref(duplicate.id)}
-                            onClick={persistDraft}
-                          >
-                            Já cadastrada em {duplicate.company_name}
-                          </Link>
+                      <div role="cell" className="linkedin-import-identity">
+                        <b
+                          className="linkedin-import-name"
+                          title={row.fullName || undefined}
+                        >
+                          {row.fullName || "Nome não informado"}
+                        </b>
+                        {(row.jobTitle || row.email) && (
+                          <span className="linkedin-import-meta">
+                            {row.jobTitle && (
+                              <span className="linkedin-import-role">
+                                {row.jobTitle}
+                              </span>
+                            )}
+                            {row.jobTitle && row.email && (
+                              <span
+                                className="linkedin-import-sep"
+                                aria-hidden="true"
+                              >
+                                ·
+                              </span>
+                            )}
+                            {row.email && (
+                              <span
+                                className="linkedin-import-email"
+                                title={row.email}
+                              >
+                                {row.email}
+                              </span>
+                            )}
+                          </span>
                         )}
+                        {row.issues.map((issue) => (
+                          <small
+                            key={issue.code}
+                            className="linkedin-import-issue"
+                          >
+                            {issue.message}
+                          </small>
+                        ))}
                         {inactiveContact && (
-                          <small>
+                          <small className="linkedin-import-issue">
                             Existe contato desativado com este perfil
                           </small>
                         )}
-                        {processed.has(row.rowId) && (
-                          <span className="linkedin-import-badge">
-                            Conexão processada
+                        {(duplicate || processed.has(row.rowId)) && (
+                          <span className="linkedin-import-tags">
+                            {duplicate && (
+                              <Link
+                                className="linkedin-import-dup"
+                                href={contactDetailHref(duplicate.id)}
+                                onClick={persistDraft}
+                              >
+                                Já cadastrada em {duplicate.company_name}
+                              </Link>
+                            )}
+                            {processed.has(row.rowId) && (
+                              <span className="linkedin-import-badge">
+                                Conexão processada
+                              </span>
+                            )}
                           </span>
                         )}
-                        {importedContacts[row.rowId] && (
-                          <Link
-                            className="text-link"
-                            href={contactDetailHref(
-                              importedContacts[row.rowId] || "",
-                            )}
-                            onClick={persistDraft}
-                          >
-                            Ver contato →
-                          </Link>
-                        )}
                       </div>
-                      <div role="cell" data-label="Empresa">
-                        <b>{row.company || "Empresa não informada"}</b>
-                        {client && <small>{client.company_name}</small>}
-                        {(!row.company ||
-                          active.length > 1 ||
-                          (active.length === 0 && inactiveCompany)) && (
-                          <select
-                            className="linkedin-import-client"
-                            aria-label={`Empresa de ${row.fullName}`}
-                            value={client?.id || ""}
-                            disabled={
-                              importing || saving || processed.has(row.rowId)
-                            }
-                            onChange={(event) => {
-                              setAssignments((current) => ({
-                                ...current,
-                                [row.rowId]: event.target.value,
-                              }));
-                              setSelected((current) => {
-                                const next = new Set(current);
-                                next.delete(row.rowId);
-                                return next;
-                              });
-                            }}
-                          >
-                            <option value="">Selecione uma empresa</option>
-                            {(row.company && active.length > 1
-                              ? active
-                              : activeClients
-                            ).map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.company_name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        {row.company &&
-                          !client &&
-                          !active.length &&
-                          (inactiveCompany ? (
-                            <span className="linkedin-import-badge">
-                              Cliente desativado
+                      <div role="cell" className="linkedin-import-company">
+                        {needsCompanySelect ? (
+                          <>
+                            <span className="linkedin-import-company-line">
+                              <b title={row.company || undefined}>
+                                {row.company || "Empresa não informada"}
+                              </b>
+                              {inactiveCompany && (
+                                <span className="linkedin-import-badge linkedin-import-badge--warning">
+                                  Cliente desativado
+                                </span>
+                              )}
                             </span>
-                          ) : (
-                            <>
-                              <span className="linkedin-import-badge">
-                                Empresa não cadastrada
-                              </span>
-                              <button
-                                type="button"
-                                className="filter-button"
-                                disabled={importing || saving}
-                                aria-expanded={company?.rowId === row.rowId}
-                                aria-controls={
-                                  company?.rowId === row.rowId
-                                    ? `linkedin-company-editor-${row.rowId}`
-                                    : undefined
-                                }
-                                onClick={(event) => {
-                                  if (company?.rowId === row.rowId) {
-                                    closeCompany();
-                                    return;
-                                  }
-                                  returnFocus.current = event.currentTarget;
-                                  setCompany({
-                                    rowId: row.rowId,
-                                    original: row.company,
-                                    name: row.company,
-                                    industry: "",
-                                    website: "",
-                                  });
-                                  setCompanyError("");
-                                  setNameError("");
-                                }}
-                              >
-                                {company?.rowId === row.rowId
-                                  ? "Fechar cadastro"
-                                  : "Cadastrar empresa"}
-                              </button>
-                            </>
-                          ))}
+                            <select
+                              className="linkedin-import-client"
+                              aria-label={`Empresa de ${row.fullName}`}
+                              value={client?.id || ""}
+                              disabled={
+                                importing || saving || processed.has(row.rowId)
+                              }
+                              onChange={(event) => {
+                                setAssignments((current) => ({
+                                  ...current,
+                                  [row.rowId]: event.target.value,
+                                }));
+                                setSelected((current) => {
+                                  const next = new Set(current);
+                                  next.delete(row.rowId);
+                                  return next;
+                                });
+                              }}
+                            >
+                              <option value="">Selecione uma empresa</option>
+                              {(row.company && active.length > 1
+                                ? active
+                                : activeClients
+                              ).map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.company_name}
+                                </option>
+                              ))}
+                            </select>
+                          </>
+                        ) : (
+                          <>
+                            <span className="linkedin-import-company-line">
+                              <b title={companyName}>{companyName}</b>
+                              {!client && !active.length && (
+                                <span
+                                  className={`linkedin-import-badge${inactiveCompany ? " linkedin-import-badge--warning" : ""}`}
+                                >
+                                  {inactiveCompany
+                                    ? "Cliente desativado"
+                                    : "Não cadastrada"}
+                                </span>
+                              )}
+                            </span>
+                            {companyFromFile && (
+                              <small className="linkedin-import-company-file">
+                                No arquivo: {companyFromFile}
+                              </small>
+                            )}
+                          </>
+                        )}
                       </div>
-                      <div role="cell" data-label="Conectado em">
+                      <div role="cell" className="linkedin-import-date">
                         {formatBrazilDate(row.connectedOn)}
                       </div>
-                      <div role="cell" data-label="E-mail">
-                        {row.email || "—"}
-                      </div>
-                      <div role="cell" data-label="LinkedIn">
+                      <div role="cell" className="linkedin-import-profile">
                         {row.linkedinUrl ? (
                           <a
                             className="linkedin-link"
@@ -857,7 +878,52 @@ export default function LinkedInImportView() {
                             in
                           </a>
                         ) : (
-                          "—"
+                          <span className="linkedin-import-empty">—</span>
+                        )}
+                      </div>
+                      <div role="cell" className="linkedin-import-actions">
+                        {importedContactId && (
+                          <Link
+                            className="text-link"
+                            href={contactDetailHref(importedContactId)}
+                            onClick={persistDraft}
+                          >
+                            Ver contato →
+                          </Link>
+                        )}
+                        {canRegisterCompany && (
+                          <button
+                            type="button"
+                            className="text-link linkedin-import-action"
+                            disabled={importing || saving}
+                            aria-expanded={company?.rowId === row.rowId}
+                            aria-controls={
+                              company?.rowId === row.rowId
+                                ? `linkedin-company-editor-${row.rowId}`
+                                : undefined
+                            }
+                            onClick={(event) => {
+                              if (company?.rowId === row.rowId) {
+                                closeCompany();
+                                return;
+                              }
+                              returnFocus.current = event.currentTarget;
+                              setCompany({
+                                rowId: row.rowId,
+                                original: row.company,
+                                name: row.company,
+                                industry: "",
+                                website: "",
+                              });
+                              setCompanyError("");
+                              setNameError("");
+                            }}
+                          >
+                            <span aria-hidden="true">＋</span>
+                            {company?.rowId === row.rowId
+                              ? "Fechar cadastro"
+                              : "Cadastrar empresa"}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -889,8 +955,8 @@ export default function LinkedInImportView() {
                       </div>
                     )}
                   </Fragment>
-                ),
-              )}
+                );
+              })}
             </div>
           )}
           {!!filtered.length && (
