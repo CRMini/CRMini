@@ -225,6 +225,13 @@ export default function EventTimeline({
       {showForm && (
         <form id={formId} className="event-form" onSubmit={submit} noValidate>
           <div className="form-grid">
+            <Field
+              label="Título *"
+              value={form.title}
+              required
+              error={fieldErrors.title}
+              onChange={(value) => updateForm("title", value)}
+            />
             <label className="form-field">
               <span>Tipo *</span>
               <select
@@ -241,13 +248,6 @@ export default function EventTimeline({
                 ))}
               </select>
             </label>
-            <Field
-              label="Título *"
-              value={form.title}
-              required
-              error={fieldErrors.title}
-              onChange={(value) => updateForm("title", value)}
-            />
             <label className="form-field">
               <span>Detalhes</span>
               <textarea

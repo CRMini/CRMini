@@ -349,4 +349,23 @@ describe("EventTimeline — formulário", () => {
       opportunity_id: "opp-1",
     });
   });
+
+  it("mostra o título antes do tipo no mesmo formulário", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse([]),
+    );
+
+    render(<EventTimeline clientId="client-1" contacts={contacts} />);
+    await screen.findByRole("heading", { name: "Nenhum evento registrado" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "＋ Registrar evento" }),
+    );
+
+    const title = screen.getByRole("textbox", { name: /Título/ });
+    const type = screen.getByLabelText(/Tipo/);
+
+    expect(
+      title.compareDocumentPosition(type) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
