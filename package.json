@@ -25,12 +25,15 @@
     "coverage": "vitest run --coverage",
     "test:components": "vitest run",
     "db:seed": "node database/seed.mjs",
-    "db:migrate": "node database/migrate.cjs"
+    "db:migrate": "node database/migrate.cjs",
+    "db:migrate:postgres": "node database/postgresql/migrate.cjs"
   },
   "dependencies": {
+    "@types/pg": "^8.23.1",
     "better-sqlite3": "^13.0.3",
     "electron-updater": "^6.8.12",
     "next": "^15.3.0",
+    "pg": "^8.23.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
