@@ -26,7 +26,10 @@
     "test:components": "vitest run",
     "db:seed": "node database/seed.mjs",
     "db:migrate": "node database/migrate.cjs",
-    "db:migrate:postgres": "node database/postgresql/migrate.cjs"
+    "db:migrate:postgres": "node database/postgresql/migrate.cjs",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "dev:postgres": "node scripts/dev-postgres.cjs"
   },
   "dependencies": {
     "@types/pg": "^8.23.1",
