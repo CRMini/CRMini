@@ -45,7 +45,9 @@ Opcionalmente copie `.env.example` para `.env.local`. O Next.js e os scripts de 
 
 - `SQLITE_PATH`: caminho do arquivo SQLite. Sem override, o banco fica em `$XDG_DATA_HOME/CRMini/crm.sqlite` ou `~/.local/share/CRMini/crm.sqlite` no Linux; `~/Library/Application Support/CRMini/crm.sqlite` no macOS; `%APPDATA%\CRMini\crm.sqlite` no Windows.
 - `CRM_ASSETS_DIR`: pasta dos logos no modo web. Sem override, usa `./tmp/assets`. No aplicativo desktop o Electron define essa variável sozinho, junto do banco.
-- `CRM_DB_DRIVER`: provedor de persistência lido no servidor. O único valor suportado atualmente é `sqlite`, usado também quando a variável não existe. Valores desconhecidos interrompem a inicialização com erro explícito, sem fallback silencioso para SQLite.
+- `CRM_DB_DRIVER`: provedor de persistência lido no servidor: `sqlite` (padrão quando ausente) ou `postgres`. Valores desconhecidos interrompem a inicialização com erro explícito, sem fallback silencioso. O aplicativo desktop sempre usa SQLite.
+- `CRM_POSTGRES_URL`: string de conexão PostgreSQL, obrigatória quando `CRM_DB_DRIVER=postgres`.
+- `CRM_POSTGRES_MAX_CONNECTIONS`: limite de conexões do pool PostgreSQL. Sem override, usa 10.
 
 Inicie a aplicação:
 
@@ -54,6 +56,27 @@ npm run dev
 ```
 
 Acesse [http://localhost:3000](http://localhost:3000). Na primeira conexão, o arquivo do banco é criado e o schema de `database/init.sql` é aplicado automaticamente, sem etapa manual.
+
+### Usar PostgreSQL no modo web
+
+O schema SQLite continua sendo o padrão. Para rodar a versão web contra PostgreSQL:
+
+```bash
+export CRM_DB_DRIVER=postgres
+export CRM_POSTGRES_URL=postgres://usuario:senha@localhost:5432/crm
+npm run db:migrate:postgres
+npm run dev
+```
+
+`npm run db:migrate:postgres` aplica `database/postgresql/init.sql` de forma idempotente e precisa ser executado antes de subir a aplicação. O banco começa vazio: `npm run db:seed` continua sendo exclusivo do SQLite. No desktop, o Electron força `sqlite` e ignora essas variáveis.
+
+Os testes de integração PostgreSQL usam um banco descartável e só rodam quando a variável está definida:
+
+```bash
+CRM_TEST_POSTGRES_URL=postgres://test:test@localhost:55432/crm_test npm test
+```
+
+Com essa variável presente, o Vitest executa os arquivos em série para evitar colisões no mesmo banco.
 
 ## Executar no Electron
 

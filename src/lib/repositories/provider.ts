@@ -5,7 +5,7 @@
  * importado apenas pela camada de repositórios, nunca por componentes cliente.
  */
 
-const SUPPORTED_PROVIDERS = ["sqlite"] as const;
+const SUPPORTED_PROVIDERS = ["sqlite", "postgres"] as const;
 
 export type PersistenceProvider = (typeof SUPPORTED_PROVIDERS)[number];
 

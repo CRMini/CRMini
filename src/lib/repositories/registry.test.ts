@@ -115,12 +115,25 @@ describe("getRepositories", () => {
     expect(second).toBe(first);
   });
 
-  it("lança erro explícito para driver inválido sem cair no SQLite", async () => {
+  it("monta o conjunto PostgreSQL quando o driver é postgres", async () => {
     process.env.CRM_DB_DRIVER = "postgres";
+    const { getRepositories } = await importRegistry();
+    const { postgresClientsRepository } = await import("./postgres/clients");
+    const { postgresDashboardRepository } =
+      await import("./postgres/dashboard");
+
+    const repositories = getRepositories();
+
+    expect(repositories.clients).toBe(postgresClientsRepository);
+    expect(repositories.dashboard).toBe(postgresDashboardRepository);
+  });
+
+  it("lança erro explícito para driver inválido sem cair no SQLite", async () => {
+    process.env.CRM_DB_DRIVER = "mysql";
     const { getRepositories } = await importRegistry();
 
     expect(() => getRepositories()).toThrow(
-      'Driver de persistência não suportado: "postgres". Valores aceitos: sqlite.',
+      'Driver de persistência não suportado: "mysql". Valores aceitos: sqlite, postgres.',
     );
 
     // Sem fallback: uma nova chamada continua falhando em vez de devolver SQLite.
@@ -134,7 +147,7 @@ describe("getRepositories", () => {
     const { getRepositories } = await importRegistry();
 
     expect(() => getRepositories()).toThrow(
-      'Driver de persistência não suportado: "SQLite". Valores aceitos: sqlite.',
+      'Driver de persistência não suportado: "SQLite". Valores aceitos: sqlite, postgres.',
     );
   });
 });

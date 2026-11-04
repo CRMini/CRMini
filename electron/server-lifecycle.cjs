@@ -64,6 +64,9 @@ function createServerLifecycle({
       HOSTNAME: host,
       PORT: String(port),
       SQLITE_PATH: databasePath,
+      // O aplicativo desktop sempre usa o banco local, mesmo que variáveis de
+      // um ambiente web (CRM_DB_DRIVER/CRM_POSTGRES_URL) estejam herdadas.
+      CRM_DB_DRIVER: "sqlite",
     };
     // Diretórios de recursos/dados para o servidor resolver init.sql, migrations
     // e logos sem depender de `process.cwd()` (que é somente leitura no pacote).
