@@ -1,6 +1,5 @@
 import type { DashboardMetrics } from "@/lib/dashboard-metrics";
 import type { RecentOpportunity } from "@/lib/recent-opportunities";
-import type { ContactImportInput, ContactImportOutcome } from "./contacts";
 import type { EventListFilters } from "./events";
 
 /**
@@ -10,6 +9,30 @@ import type { EventListFilters } from "./events";
  * repositório atuais; os consumidores continuam importando os módulos públicos
  * e a implementação concreta fica a cargo do provedor selecionado.
  */
+
+export type ContactImportInput = {
+  rowId: number;
+  clientId: string;
+  fullName: string;
+  jobTitle?: string | null;
+  email?: string | null;
+  linkedinUrl?: string | null;
+};
+
+export type ContactImportStatus =
+  | "imported"
+  | "would_import"
+  | "duplicate"
+  | "duplicate_in_batch"
+  | "invalid_client"
+  | "invalid_name";
+
+export type ContactImportOutcome = {
+  rowId: number;
+  status: ContactImportStatus;
+  contactId?: string;
+  existingContactId?: string;
+};
 
 export interface ClientsRepository {
   listClients(search: string | null): Promise<Record<string, any>[]>;
