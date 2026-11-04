@@ -1,6 +1,3 @@
-import * as events from "./events";
-import * as opportunities from "./opportunities";
-import * as tasks from "./tasks";
 import type {
   ClientsRepository,
   ContactsRepository,
@@ -17,7 +14,10 @@ import {
 import { sqliteClientsRepository } from "./sqlite/clients";
 import { sqliteContactsRepository } from "./sqlite/contacts";
 import { sqliteDashboardRepository } from "./sqlite/dashboard";
+import { sqliteEventsRepository } from "./sqlite/events";
+import { sqliteOpportunitiesRepository } from "./sqlite/opportunities";
 import { sqliteSettingsRepository } from "./sqlite/settings";
+import { sqliteTasksRepository } from "./sqlite/tasks";
 
 /** Conjunto completo de repositórios por domínio. */
 export interface Repositories {
@@ -30,15 +30,13 @@ export interface Repositories {
   dashboard: DashboardRepository;
 }
 
-// Os domínios ainda não migrados já são implementações SQLite e continuam
-// sendo importados dos módulos públicos até a movimentação planejada.
 function createSqliteRepositories(): Repositories {
   return {
     clients: sqliteClientsRepository,
     contacts: sqliteContactsRepository,
-    opportunities,
-    tasks,
-    events,
+    opportunities: sqliteOpportunitiesRepository,
+    tasks: sqliteTasksRepository,
+    events: sqliteEventsRepository,
     settings: sqliteSettingsRepository,
     dashboard: sqliteDashboardRepository,
   };

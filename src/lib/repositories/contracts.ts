@@ -1,6 +1,5 @@
 import type { DashboardMetrics } from "@/lib/dashboard-metrics";
 import type { RecentOpportunity } from "@/lib/recent-opportunities";
-import type { EventListFilters } from "./events";
 
 /**
  * Contratos públicos da camada de persistência.
@@ -9,6 +8,13 @@ import type { EventListFilters } from "./events";
  * repositório atuais; os consumidores continuam importando os módulos públicos
  * e a implementação concreta fica a cargo do provedor selecionado.
  */
+
+export type EventListFilters = {
+  clientId?: string | null;
+  opportunityId?: string | null;
+  type?: string | null;
+  limit?: number | null;
+};
 
 export type ContactImportInput = {
   rowId: number;
