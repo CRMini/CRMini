@@ -49,7 +49,11 @@ it("inicia o standalone de produção com server.js e aguarda resposta na porta 
     resourcesDir: "/crm/.next/standalone",
     dataDir: "/crm/data",
     isDevelopment: false,
-    env: {},
+    // Simula variáveis herdadas de um ambiente web: o desktop deve ignorá-las.
+    env: {
+      CRM_DB_DRIVER: "postgres",
+      CRM_POSTGRES_URL: "postgres://usuario:senha@host:5432/banco",
+    },
     fileExists: () => true,
   });
 
@@ -64,6 +68,8 @@ it("inicia o standalone de produção com server.js e aguarda resposta na porta 
       env: expect.objectContaining({
         ELECTRON_RUN_AS_NODE: "1",
         SQLITE_PATH: "/isolated/B.sqlite",
+        // O desktop sempre usa SQLite, mesmo com variáveis de ambiente web herdadas.
+        CRM_DB_DRIVER: "sqlite",
         CRM_RESOURCES_DIR: "/crm/.next/standalone",
         CRM_DATA_DIR: "/crm/data",
       }),
