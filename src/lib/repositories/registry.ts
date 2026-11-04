@@ -1,5 +1,3 @@
-import * as clients from "./clients";
-import * as contacts from "./contacts";
 import * as events from "./events";
 import * as opportunities from "./opportunities";
 import * as tasks from "./tasks";
@@ -16,6 +14,8 @@ import {
   resolvePersistenceProvider,
   type PersistenceProvider,
 } from "./provider";
+import { sqliteClientsRepository } from "./sqlite/clients";
+import { sqliteContactsRepository } from "./sqlite/contacts";
 import { sqliteDashboardRepository } from "./sqlite/dashboard";
 import { sqliteSettingsRepository } from "./sqlite/settings";
 
@@ -34,8 +34,8 @@ export interface Repositories {
 // sendo importados dos módulos públicos até a movimentação planejada.
 function createSqliteRepositories(): Repositories {
   return {
-    clients,
-    contacts,
+    clients: sqliteClientsRepository,
+    contacts: sqliteContactsRepository,
     opportunities,
     tasks,
     events,
