@@ -1,14 +1,8 @@
 import Breadcrumbs from "@/components/breadcrumbs";
 import Link from "next/link";
-import { getDb } from "@/lib/db";
-import {
-  getRecentOpportunities,
-  type RecentOpportunity,
-} from "@/lib/recent-opportunities";
-import {
-  getDashboardMetrics,
-  type DashboardMetricRow,
-} from "@/lib/dashboard-metrics";
+import { getDashboardData } from "@/lib/repositories/dashboard";
+import type { RecentOpportunity } from "@/lib/recent-opportunities";
+import type { DashboardMetrics } from "@/lib/dashboard-metrics";
 import { getDashboardDate, getGreeting } from "@/lib/greeting";
 import { formatBrazilDateMedium } from "@/lib/brazil-date";
 import { getUserName } from "@/lib/repositories/settings";
@@ -22,24 +16,21 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   let opportunities: RecentOpportunity[] = [];
   let userName: string | null = null;
-  let stats = {
+  let stats: DashboardMetrics = {
     contactsCount: 0,
     opportunitiesCount: 0,
     openOpportunitiesCount: 0,
     conversionRate: 0,
-    openValueByCurrency: {} as Record<string, string | number>,
+    openValueByCurrency: {},
   };
   try {
-    const db = getDb();
-    [opportunities, stats, userName] = await Promise.all([
-      getRecentOpportunities((sql) => ({
-        rows: db.prepare(sql).all() as RecentOpportunity[],
-      })),
-      getDashboardMetrics((sql) => ({
-        rows: [db.prepare(sql).get() as DashboardMetricRow],
-      })),
+    const [dashboard, name] = await Promise.all([
+      getDashboardData(),
       getUserName(),
     ]);
+    opportunities = dashboard.opportunities;
+    stats = dashboard.metrics;
+    userName = name;
   } catch {
     // A página permanece acessível se o banco estiver temporariamente indisponível.
   }

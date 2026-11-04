@@ -1,35 +1,27 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserName, getGreeting, getDashboardDate } = vi.hoisted(() => ({
-  getUserName: vi.fn(),
-  getGreeting: vi.fn(),
-  getDashboardDate: vi.fn(),
-}));
+const { getUserName, getGreeting, getDashboardDate, getDashboardData } =
+  vi.hoisted(() => ({
+    getUserName: vi.fn(),
+    getGreeting: vi.fn(),
+    getDashboardDate: vi.fn(),
+    getDashboardData: vi.fn(),
+  }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: React.ComponentProps<"a"> & { href: string }) => (
+  default: ({
+    href,
+    children,
+    ...props
+  }: React.ComponentProps<"a"> & { href: string }) => (
     <a href={href} {...props}>
       {children}
     </a>
   ),
 }));
 
-vi.mock("@/lib/db", () => ({
-  getDb: () => ({
-    prepare: () => ({
-      all: () => [],
-      get: () => ({
-        contacts_count: 0,
-        opportunities_count: 0,
-        open_opportunities_count: 0,
-        won_count: 0,
-        lost_count: 0,
-        open_values: "[]",
-      }),
-    }),
-  }),
-}));
+vi.mock("@/lib/repositories/dashboard", () => ({ getDashboardData }));
 
 vi.mock("@/lib/repositories/settings", () => ({ getUserName }));
 vi.mock("@/lib/greeting", () => ({ getGreeting, getDashboardDate }));
@@ -38,9 +30,20 @@ import Home, { dynamic } from "./page";
 
 beforeEach(() => {
   getUserName.mockReset();
+  getDashboardData.mockReset();
   getGreeting.mockReset();
   getDashboardDate.mockReset();
   getUserName.mockResolvedValue(null);
+  getDashboardData.mockResolvedValue({
+    opportunities: [],
+    metrics: {
+      contactsCount: 0,
+      opportunitiesCount: 0,
+      openOpportunitiesCount: 0,
+      conversionRate: 0,
+      openValueByCurrency: {},
+    },
+  });
   getDashboardDate.mockReturnValue("SÁBADO, 1 DE FEVEREIRO");
   getGreeting.mockImplementation((_date: Date, name?: string | null) =>
     name ? `Bom dia, ${name}` : "Bom dia",
@@ -68,9 +71,9 @@ describe("Visão geral", () => {
     render(await Home());
 
     expect(getGreeting).toHaveBeenCalledWith(expect.any(Date), "Ana");
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Bom dia, Ana");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Bom dia, Ana",
+    );
   });
 
   it("sem nome configurado, saúda sem sufixo e recebe null", async () => {
@@ -90,9 +93,9 @@ describe("Visão geral", () => {
     render(await Home());
 
     expect(getGreeting).toHaveBeenCalledWith(expect.any(Date), null);
-    expect(
-      screen.getByRole("heading", { level: 1 }),
-    ).toHaveTextContent("Bom dia");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Bom dia",
+    );
     expect(
       screen.getByRole("link", { name: "＋ Novo contato" }),
     ).toBeInTheDocument();
