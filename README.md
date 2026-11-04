@@ -59,14 +59,24 @@ Acesse [http://localhost:3000](http://localhost:3000). Na primeira conexão, o a
 
 ### Usar PostgreSQL no modo web
 
-O schema SQLite continua sendo o padrão. Para rodar a versão web contra PostgreSQL:
+O schema SQLite continua sendo o padrão. O caminho mais curto usa o PostgreSQL local definido em `compose.yaml`:
 
 ```bash
-export CRM_DB_DRIVER=postgres
-export CRM_POSTGRES_URL=postgres://usuario:senha@localhost:5432/crm
-npm run db:migrate:postgres
-npm run dev
+npm run db:up          # sobe o PostgreSQL e espera ficar saudável
+npm run dev:postgres   # aplica o schema e inicia o Next.js
+npm run db:down        # derruba o container; os dados ficam no volume
 ```
+
+`dev:postgres` usa `CRM_POSTGRES_URL` quando definida. Sem ela, usa `postgres://crm:crm@127.0.0.1:5432/crm`, o mesmo banco do compose, e avisa no terminal. As migrations são aplicadas antes do Next.js; se falharem, o servidor não inicia.
+
+Para outro servidor PostgreSQL, basta definir a variável e rodar o mesmo script:
+
+```bash
+export CRM_POSTGRES_URL=postgres://usuario:senha@outro-host:5432/crm
+npm run dev:postgres
+```
+
+O schema também pode ser aplicado isoladamente com `npm run db:migrate:postgres`.
 
 `npm run db:migrate:postgres` aplica `database/postgresql/init.sql` de forma idempotente e precisa ser executado antes de subir a aplicação. O banco começa vazio: `npm run db:seed` continua sendo exclusivo do SQLite. No desktop, o Electron força `sqlite` e ignora essas variáveis.
 
