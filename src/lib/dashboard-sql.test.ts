@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db";
 import { createClient } from "./repositories/clients";
 import { deactivateContact } from "./repositories/contacts";
 import { createOpportunity } from "./repositories/opportunities";
+import { getDashboardData } from "./repositories/dashboard";
 import {
   getDashboardMetrics,
   type DashboardMetricRow,
@@ -114,6 +115,53 @@ describe("consultas do painel no SQLite", () => {
       conversionRate: 0,
       openValueByCurrency: {},
     });
+  });
+
+  it("fornece métricas e oportunidades pela fronteira do repositório", async () => {
+    const client = await createClient({
+      company_name: "Contrato Ltda.",
+      contacts: [{ full_name: "Contato Contrato", is_primary: true }],
+    });
+    const contactId = (
+      getDb()
+        .prepare("SELECT id FROM contacts WHERE client_id = ?")
+        .get(client.id) as { id: string }
+    ).id;
+    await createOpportunity({
+      name: "Contrato recente",
+      client_id: client.id,
+      contact_id: contactId,
+      value: "321.45",
+    });
+
+    await expect(getDashboardData()).resolves.toEqual({
+      opportunities: [
+        expect.objectContaining({
+          name: "Contrato recente",
+          company_name: "Contrato Ltda.",
+          contact_name: "Contato Contrato",
+          value: "321.45",
+        }),
+      ],
+      metrics: {
+        contactsCount: 1,
+        opportunitiesCount: 1,
+        openOpportunitiesCount: 1,
+        conversionRate: 0,
+        openValueByCurrency: { BRL: "321.45" },
+      },
+    });
+  });
+
+  it("propaga falha do repositório", async () => {
+    const failure = new Error("Falha ao ler oportunidades");
+    const prepare = vi.spyOn(getDb(), "prepare").mockImplementation(() => {
+      throw failure;
+    });
+
+    await expect(getDashboardData()).rejects.toBe(failure);
+
+    prepare.mockRestore();
   });
 
   it("lista oportunidades recentes com empresa e contato", async () => {
