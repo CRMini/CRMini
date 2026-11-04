@@ -31,7 +31,7 @@
 ## Banco de dados
 
 - Para banco novo, `database/init.sql` é aplicado automaticamente na abertura do banco pela conexão em `src/lib/db.ts`, que também habilita `PRAGMA foreign_keys = ON`. Migrations em `database/migrations` são manuais e devem ser aplicadas na ordem numérica, uma única vez, a bancos existentes compatíveis.
-- A persistência é acessada pelos módulos públicos de `src/lib/repositories`, que delegam ao provedor escolhido por `CRM_DB_DRIVER` (hoje apenas `sqlite`). Novas implementações devem respeitar `contracts.ts` e ser registradas em `registry.ts`, sem fallback silencioso de banco.
+- A persistência é acessada pelos módulos públicos de `src/lib/repositories`, que delegam ao provedor escolhido por `CRM_DB_DRIVER` (`sqlite` ou `postgres`; o desktop força `sqlite`). Novas implementações devem respeitar `contracts.ts` e ser registradas em `registry.ts`, sem fallback silencioso de banco.
 - Antes de modificar schema ou preparar instruções de migration, confira o schema atual, migrations anteriores e os consumidores da coluna/tabela. Considere os dados existentes e faça backup antes de migrations destrutivas.
 - Não aplique comandos ao banco nem remova o arquivo do banco (`database/crm.sqlite` ou `SQLITE_PATH`) como parte da tarefa sem autorização explícita. A remoção do arquivo apaga os dados locais.
 

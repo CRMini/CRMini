@@ -7,6 +7,13 @@ import type {
   SettingsRepository,
   TasksRepository,
 } from "./contracts";
+import { postgresClientsRepository } from "./postgres/clients";
+import { postgresContactsRepository } from "./postgres/contacts";
+import { postgresDashboardRepository } from "./postgres/dashboard";
+import { postgresEventsRepository } from "./postgres/events";
+import { postgresOpportunitiesRepository } from "./postgres/opportunities";
+import { postgresSettingsRepository } from "./postgres/settings";
+import { postgresTasksRepository } from "./postgres/tasks";
 import {
   resolvePersistenceProvider,
   type PersistenceProvider,
@@ -42,6 +49,18 @@ function createSqliteRepositories(): Repositories {
   };
 }
 
+function createPostgresRepositories(): Repositories {
+  return {
+    clients: postgresClientsRepository,
+    contacts: postgresContactsRepository,
+    opportunities: postgresOpportunitiesRepository,
+    tasks: postgresTasksRepository,
+    events: postgresEventsRepository,
+    settings: postgresSettingsRepository,
+    dashboard: postgresDashboardRepository,
+  };
+}
+
 let repositories: Repositories | undefined;
 
 /** Resolve o conjunto de repositórios uma única vez por processo. */
@@ -53,6 +72,9 @@ export function getRepositories(): Repositories {
   switch (provider) {
     case "sqlite":
       repositories = createSqliteRepositories();
+      break;
+    case "postgres":
+      repositories = createPostgresRepositories();
       break;
     default: {
       const unsupported: never = provider;

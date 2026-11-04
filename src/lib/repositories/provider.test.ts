@@ -40,12 +40,19 @@ describe("resolvePersistenceProvider", () => {
     expect(resolvePersistenceProvider()).toBe("sqlite");
   });
 
-  it("lança erro claro para driver não suportado", async () => {
+  it("aceita postgres explicitamente", async () => {
     process.env.CRM_DB_DRIVER = "postgres";
     const { resolvePersistenceProvider } = await importProvider();
 
+    expect(resolvePersistenceProvider()).toBe("postgres");
+  });
+
+  it("lança erro claro para driver não suportado", async () => {
+    process.env.CRM_DB_DRIVER = "mysql";
+    const { resolvePersistenceProvider } = await importProvider();
+
     expect(() => resolvePersistenceProvider()).toThrow(
-      'Driver de persistência não suportado: "postgres". Valores aceitos: sqlite.',
+      'Driver de persistência não suportado: "mysql". Valores aceitos: sqlite, postgres.',
     );
   });
 
