@@ -1,34 +1,12 @@
-import { getDb } from "@/lib/db";
-import {
-  getDashboardMetrics,
-  type DashboardMetricRow,
-  type DashboardMetrics,
-} from "@/lib/dashboard-metrics";
-import {
-  getRecentOpportunities as queryRecentOpportunities,
-  type RecentOpportunity,
-} from "@/lib/recent-opportunities";
+import type { DashboardMetrics } from "@/lib/dashboard-metrics";
+import type { RecentOpportunity } from "@/lib/recent-opportunities";
+import type { DashboardRepository } from "./contracts";
+import { getRepositories } from "./registry";
 
-/** Read-only data contract consumed by the dashboard, independent of SQLite. */
-export interface DashboardRepository {
-  getMetrics(): Promise<DashboardMetrics>;
-  getRecentOpportunities(): Promise<RecentOpportunity[]>;
-}
+export type { DashboardRepository } from "./contracts";
 
-const sqliteDashboardRepository: DashboardRepository = {
-  getMetrics: () =>
-    getDashboardMetrics((sql) => ({
-      rows: [getDb().prepare(sql).get() as DashboardMetricRow],
-    })),
-  getRecentOpportunities: () =>
-    queryRecentOpportunities((sql) => ({
-      rows: getDb().prepare(sql).all() as RecentOpportunity[],
-    })),
-};
-
-/** Persistence selection is deliberately centralized here for future drivers. */
 export function getDashboardRepository(): DashboardRepository {
-  return sqliteDashboardRepository;
+  return getRepositories().dashboard;
 }
 
 export function getDashboardData(): Promise<{
