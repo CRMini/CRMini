@@ -12,6 +12,9 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     restoreMocks: true,
+    // Os testes de integração PostgreSQL compartilham o mesmo banco descartável,
+    // então precisam rodar em série para não colidirem entre arquivos.
+    fileParallelism: !process.env.CRM_TEST_POSTGRES_URL,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}", "electron/**/*.cjs", "scripts/**/*.cjs"],
