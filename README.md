@@ -45,6 +45,7 @@ Opcionalmente copie `.env.example` para `.env.local`. O Next.js e os scripts de 
 
 - `SQLITE_PATH`: caminho do arquivo SQLite. Sem override, o banco fica em `$XDG_DATA_HOME/CRMini/crm.sqlite` ou `~/.local/share/CRMini/crm.sqlite` no Linux; `~/Library/Application Support/CRMini/crm.sqlite` no macOS; `%APPDATA%\CRMini\crm.sqlite` no Windows.
 - `CRM_ASSETS_DIR`: pasta dos logos no modo web. Sem override, usa `./tmp/assets`. No aplicativo desktop o Electron define essa variável sozinho, junto do banco.
+- `CRM_DB_DRIVER`: provedor de persistência lido no servidor. O único valor suportado atualmente é `sqlite`, usado também quando a variável não existe. Valores desconhecidos interrompem a inicialização com erro explícito, sem fallback silencioso para SQLite.
 
 Inicie a aplicação:
 
@@ -231,7 +232,7 @@ O comando imprime uma linha por problema com rota, largura e medida, termina com
 - `src/app/api/cep`: consulta de CEP no ViaCEP para autocompletar o endereço do cliente.
 - `src/components`: componentes compartilhados (barra lateral, breadcrumbs, listagens, formulários e chip de atualização).
 - `src/lib/db.ts`: conexão SQLite única, com schema inicial, migrations e foreign keys habilitadas.
-- `src/lib/repositories`: acesso ao banco para clientes, contatos, oportunidades, tarefas e configurações.
+- `src/lib/repositories`: fachadas públicas de acesso ao banco para clientes, contatos, oportunidades, tarefas, eventos, configurações e painel. `contracts.ts` define os contratos, `provider.ts` seleciona o provedor e `registry.ts` monta o conjunto usado pela aplicação; as implementações concretas ficam em `src/lib/repositories/sqlite`.
 - `src/lib`: regras e utilitários de domínio (máscaras, CEP, telefone, datas, horas de projeto, métricas do painel, preferência da sidebar, caminhos de logos e parser do export do LinkedIn).
 - `electron/`: processo principal, preload, splash, seleção de banco, migrations, servidor Next e atualização automática. Veja `electron/README.md`.
 - `scripts/`: preparação do standalone, verificação do ABI do `better-sqlite3` e checagem de responsividade.
