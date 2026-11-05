@@ -68,6 +68,9 @@ jobs:
           $requiredFiles = @(
             "dist/win-unpacked/resources/app/server.js",
             "dist/win-unpacked/resources/app/database/migrate.cjs",
+            # O registry importa os adaptadores PostgreSQL no servidor; sem o
+            # driver o aplicativo desktop falharia ao iniciar, mesmo usando SQLite.
+            "dist/win-unpacked/resources/app/node_modules/pg/package.json",
             "dist/win-unpacked/resources/icon.ico"
           )
           $missing = @()
