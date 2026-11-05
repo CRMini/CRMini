@@ -22,6 +22,25 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Os adaptadores PostgreSQL só são exercitados com um banco real. O serviço
+    # abaixo é descartável e próprio do job; os testes aplicam o schema e limpam
+    # as tabelas. Sem ele, esses arquivos seriam silenciosamente pulados.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: crm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d crm_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CRM_TEST_POSTGRES_URL: postgres://test:test@127.0.0.1:5432/crm_test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +56,11 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      # Impede que a configuração do banco regrida e os testes de integração
+      # voltem a ser pulados sem ninguém perceber.
+      - name: Conferir conexão de teste PostgreSQL
+        run: test -n "$CRM_TEST_POSTGRES_URL"
+
       - name: Executar lint
         run: npm run lint
 
@@ -48,6 +72,9 @@ jobs:
       # preexistentes fora do padrão do Prettier, então o gate falharia em toda
       # execução sem apontar regressão. A formatação continua sendo verificada
       # localmente antes do commit.
+      # Com `CRM_TEST_POSTGRES_URL` definida, a suíte inclui os testes de
+      # integração PostgreSQL e roda os arquivos em série para não colidirem no
+      # mesmo banco (ver `fileParallelism` em vitest.config.mts).
       - name: Executar testes com cobertura
         run: npm run coverage
 
