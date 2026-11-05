@@ -86,7 +86,7 @@ Os testes de integração PostgreSQL usam um banco descartável e só rodam quan
 CRM_TEST_POSTGRES_URL=postgres://test:test@localhost:55432/crm_test npm test
 ```
 
-Com essa variável presente, o Vitest executa os arquivos em série para evitar colisões no mesmo banco.
+Com essa variável presente, o Vitest executa os arquivos em série para evitar colisões no mesmo banco. O CI define a variável e sobe um serviço `postgres:17-alpine` no job, então o PR valida também os adaptadores PostgreSQL; sem o serviço, os testes de integração seriam pulados.
 
 ## Executar no Electron
 
