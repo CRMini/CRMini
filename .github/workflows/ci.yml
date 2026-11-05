@@ -1,8 +1,9 @@
 name: CI
 
 # Verificação contínua de pushes em `main` e de pull requests: lint, testes com
-# piso de cobertura e build de produção. Antes disso, essas quebras só
-# apareciam no workflow de release, que empacota no Windows e é caro.
+# piso de cobertura, testes de integração PostgreSQL e build de produção. Antes
+# disso, essas quebras só apareciam no workflow de release, que empacota no
+# Windows e é caro.
 on:
   push:
     branches:
@@ -20,11 +21,62 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Suíte padrão: SQLite em memória, unidades e regras. Não depende de serviço
+  # externo e é o job que aplica o piso de cobertura.
   test:
     runs-on: ubuntu-latest
-    # Os adaptadores PostgreSQL só são exercitados com um banco real. O serviço
-    # abaixo é descartável e próprio do job; os testes aplicam o schema e limpam
-    # as tabelas. Sem ele, esses arquivos seriam silenciosamente pulados.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          # O projeto exige Node.js 22.12+ (Electron 44 e Vitest 5); `cache: npm`
+          # reaproveita o download das dependências entre execuções.
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar lint
+        run: npm run lint
+
+      # `npm run coverage` roda a suíte inteira e aplica os pisos mínimos de
+      # cobertura de `vitest.config.mts`; abaixo deles o comando falha e o job
+      # fica vermelho, em vez de aceitar queda silenciosa de cobertura.
+      #
+      # `npm run format:check` fica fora do CI por enquanto: há arquivos
+      # preexistentes fora do padrão do Prettier, então o gate falharia em toda
+      # execução sem apontar regressão. A formatação continua sendo verificada
+      # localmente antes do commit.
+      - name: Executar testes com cobertura
+        run: npm run coverage
+
+      # O build é o mesmo (`output: "standalone"`) consumido pelo empacotamento
+      # desktop; quebrá-lo aqui é barato perto de descobrir o problema na release.
+      - name: Gerar build de produção
+        run: npm run build
+
+      # Publicado apenas em falha: o relatório de `coverage/` mostra qual arquivo
+      # ficou abaixo do piso. `if-no-files-found: ignore` evita um erro
+      # secundário quando a falha antecede a cobertura (ex.: lint).
+      - name: Publicar relatório de cobertura
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Testes reais dos adaptadores PostgreSQL. Roda em paralelo ao job `test` e
+  # aparece como check próprio no PR. O serviço é descartável e os testes
+  # aplicam o schema e limpam as tabelas entre os casos.
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:17-alpine
@@ -48,49 +100,16 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          # O projeto exige Node.js 22.12+ (Electron 44 e Vitest 5); `cache: npm`
-          # reaproveita o download das dependências entre execuções.
           node-version: 22
           cache: npm
 
       - name: Instalar dependências
         run: npm ci
 
-      # Impede que a configuração do banco regrida e os testes de integração
-      # voltem a ser pulados sem ninguém perceber.
+      # Se o serviço não estiver disponível, os arquivos de integração seriam
+      # pulados. Este passo impede que a configuração regrida em silêncio.
       - name: Conferir conexão de teste PostgreSQL
         run: test -n "$CRM_TEST_POSTGRES_URL"
 
-      - name: Executar lint
-        run: npm run lint
-
-      # `npm run coverage` roda a suíte inteira e aplica os pisos mínimos de
-      # cobertura de `vitest.config.mts`; abaixo deles o comando falha e o job
-      # fica vermelho, em vez de aceitar queda silenciosa de cobertura.
-      #
-      # `npm run format:check` fica fora do CI por enquanto: há arquivos
-      # preexistentes fora do padrão do Prettier, então o gate falharia em toda
-      # execução sem apontar regressão. A formatação continua sendo verificada
-      # localmente antes do commit.
-      # Com `CRM_TEST_POSTGRES_URL` definida, a suíte inclui os testes de
-      # integração PostgreSQL e roda os arquivos em série para não colidirem no
-      # mesmo banco (ver `fileParallelism` em vitest.config.mts).
-      - name: Executar testes com cobertura
-        run: npm run coverage
-
-      # O build é o mesmo (`output: "standalone"`) consumido pelo empacotamento
-      # desktop; quebrá-lo aqui é barato perto de descobrir o problema na release.
-      - name: Gerar build de produção
-        run: npm run build
-
-      # Publicado apenas em falha: o relatório de `coverage/` mostra qual arquivo
-      # ficou abaixo do piso. `if-no-files-found: ignore` evita um erro
-      # secundário quando a falha antecede a cobertura (ex.: lint).
-      - name: Publicar relatório de cobertura
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
-          if-no-files-found: ignore
-          retention-days: 7
+      - name: Executar testes de integração
+        run: npx vitest run src/lib/repositories/postgres/
