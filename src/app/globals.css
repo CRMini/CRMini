@@ -3158,3 +3158,39 @@ main.records-page .row-action:focus-visible::after {
     display: none;
   }
 }
+
+/* Documentação da API (api-docs) — apenas em desenvolvimento */
+.api-docs-page {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+.api-docs-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+.api-docs-toolbar p {
+  margin: 0;
+}
+.api-docs-toolbar a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.api-docs-toolbar a:hover {
+  text-decoration: underline;
+}
+.api-docs-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  min-height: 0;
+}
