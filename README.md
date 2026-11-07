@@ -6,6 +6,8 @@
 
 Aplicação web de CRM para organizar empresas clientes, contatos, oportunidades e tarefas. Os dados são persistidos em um arquivo SQLite local; a interface permite acompanhar informações e atividades comerciais em um só lugar. O mesmo código roda no navegador (`npm run dev`) e em uma janela desktop com Electron.
 
+![Demonstração das telas do CRMini: visão geral, clientes, contatos, oportunidades e tarefas](./docs/crmini-demo.gif)
+
 ## Funcionalidades
 
 - **Visão geral:** métricas de contatos e oportunidades, oportunidades recentes e saudação com o nome configurado pelo usuário.
