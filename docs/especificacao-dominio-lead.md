@@ -135,7 +135,7 @@ passa a ser regra de domínio condicional (§6.9), não obrigatoriedade de colun
 | País | `contact_country_id` | TEXT → ref | não | mesma lista extensível da raiz | 0..1 | idem |
 | E-mail | `contact_email` | TEXT | não | e-mail (formato) | 0..1 | validação de formato; **sem unicidade** (D-08) |
 | Telefone / WhatsApp | `contact_phone` | TEXT | não | telefone (máscara) | 0..1 | 1 campo para telefone/WhatsApp no Lead |
-| Cargo | `contact_job_title` | TEXT | não | lista extensível (seed ~30) | 0..1 | "adicionar opção" |
+| Cargo | `contact_job_title_id` | TEXT → ref | não | lista extensível (seed 30) | 0..1 | "adicionar opção" |
 
 O contato do Lead **não** mapeia 1:1 para `contacts`: `contacts` hoje não tem colunas de endereço
 (será expandido — D-07) nem separa nome/sobrenome (usa `full_name`). Ver §11.
@@ -345,7 +345,7 @@ oportunidade.
 | Destino | Fonte (Lead) → campo de destino |
 |---|---|
 | `clients` | `company_name` → `company_name`; `trade_name` → `trade_name`; `tax_id` → `tax_id`; `industry_id` → `industry`; `segment_id` → (coluna nova `segment` — §11); `revenue_band` → (nova); `employee_band` → (nova); `street`/`street_number`/`complement`/`neighborhood`/`city_id`/`state`/`postal_code`/`country_id` → endereço; `website` → `website`; `description` → `notes` (ou nova `description`); `lead_source_id` → (nova `lead_source`) |
-| `contacts` | `contact_first_name` + `contact_last_name` → `full_name` (composição; QA-10); `contact_job_title` → `job_title`; `contact_email` → `email`; `contact_phone` → `phone` (e/ou `mobile`); endereço do contato → colunas novas de endereço em `contacts` (D-07, ainda não implementado) |
+| `contacts` | `contact_first_name` + `contact_last_name` → `full_name` (composição; QA-10); `contact_job_title_id` → `job_title` (nome resolvido em `job_titles`); `contact_email` → `email`; `contact_phone` → `phone` (e/ou `mobile`); endereço do contato → colunas novas de endereço em `contacts` (D-07, ainda não implementado) |
 | `opportunities` | `desired_solution` → `offered_solution`; `identified_pain` → `customer_need`; `budget` → `budget`/`value` (a confirmar); Comunicação → parcial (QA-08) |
 
 **O que permanece exclusivo do Lead (não é copiado):** `priority`, `expected_timeframe`, o
