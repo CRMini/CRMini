@@ -49,6 +49,7 @@ const domainMethods: Array<[keyof Repositories, string[]]> = [
     "events",
     ["listEvents", "getEvent", "createEvent", "updateEvent", "deactivateEvent"],
   ],
+  ["leads", ["listLeads"]],
   ["settings", ["getUserName", "saveUserName"]],
   ["dashboard", ["getMetrics", "getRecentOpportunities"]],
 ];
@@ -66,7 +67,7 @@ afterEach(() => {
 });
 
 describe("getRepositories", () => {
-  it("expõe os sete domínios com os métodos do contrato", async () => {
+  it("expõe os oito domínios com os métodos do contrato", async () => {
     const { getRepositories } = await importRegistry();
 
     const repositories = getRepositories();
@@ -77,6 +78,7 @@ describe("getRepositories", () => {
         "contacts",
         "dashboard",
         "events",
+        "leads",
         "opportunities",
         "settings",
         "tasks",

@@ -3,6 +3,7 @@ import type {
   ContactsRepository,
   DashboardRepository,
   EventsRepository,
+  LeadsRepository,
   OpportunitiesRepository,
   SettingsRepository,
   TasksRepository,
@@ -11,6 +12,7 @@ import { postgresClientsRepository } from "./postgres/clients";
 import { postgresContactsRepository } from "./postgres/contacts";
 import { postgresDashboardRepository } from "./postgres/dashboard";
 import { postgresEventsRepository } from "./postgres/events";
+import { postgresLeadsRepository } from "./postgres/leads";
 import { postgresOpportunitiesRepository } from "./postgres/opportunities";
 import { postgresSettingsRepository } from "./postgres/settings";
 import { postgresTasksRepository } from "./postgres/tasks";
@@ -22,6 +24,7 @@ import { sqliteClientsRepository } from "./sqlite/clients";
 import { sqliteContactsRepository } from "./sqlite/contacts";
 import { sqliteDashboardRepository } from "./sqlite/dashboard";
 import { sqliteEventsRepository } from "./sqlite/events";
+import { sqliteLeadsRepository } from "./sqlite/leads";
 import { sqliteOpportunitiesRepository } from "./sqlite/opportunities";
 import { sqliteSettingsRepository } from "./sqlite/settings";
 import { sqliteTasksRepository } from "./sqlite/tasks";
@@ -33,6 +36,7 @@ export interface Repositories {
   opportunities: OpportunitiesRepository;
   tasks: TasksRepository;
   events: EventsRepository;
+  leads: LeadsRepository;
   settings: SettingsRepository;
   dashboard: DashboardRepository;
 }
@@ -44,6 +48,7 @@ function createSqliteRepositories(): Repositories {
     opportunities: sqliteOpportunitiesRepository,
     tasks: sqliteTasksRepository,
     events: sqliteEventsRepository,
+    leads: sqliteLeadsRepository,
     settings: sqliteSettingsRepository,
     dashboard: sqliteDashboardRepository,
   };
@@ -56,6 +61,7 @@ function createPostgresRepositories(): Repositories {
     opportunities: postgresOpportunitiesRepository,
     tasks: postgresTasksRepository,
     events: postgresEventsRepository,
+    leads: postgresLeadsRepository,
     settings: postgresSettingsRepository,
     dashboard: postgresDashboardRepository,
   };

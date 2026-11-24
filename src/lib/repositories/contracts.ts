@@ -132,6 +132,13 @@ export interface EventsRepository {
   deactivateEvent(id: string): Promise<Record<string, any> | null>;
 }
 
+export interface LeadsRepository {
+  listLeads(
+    search: string | null,
+    status: string | null,
+  ): Promise<Record<string, any>[]>;
+}
+
 export interface SettingsRepository {
   getUserName(): Promise<string | null>;
   saveUserName(name: string | null): Promise<void>;
