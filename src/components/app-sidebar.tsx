@@ -12,6 +12,7 @@ import {
 const items = [
   ["/", "⌂", "Visão geral"],
   ["/clientes", "♙", "Clientes"],
+  ["/leads", "◎", "Leads"],
   ["/contatos", "♧", "Contatos"],
   ["/oportunidades", "◈", "Oportunidades"],
   ["/tarefas", "✓", "Tarefas"],

@@ -66,7 +66,7 @@ describe("Menu lateral", () => {
     const navigation = screen.getByRole("navigation", {
       name: "Navegação principal",
     });
-    expect(navigation.querySelectorAll("a")).toHaveLength(5);
+    expect(navigation.querySelectorAll("a")).toHaveLength(6);
     expect(screen.getByRole("link", { name: "Visão geral" })).toHaveAttribute(
       "href",
       "/",
@@ -74,6 +74,10 @@ describe("Menu lateral", () => {
     expect(screen.getByRole("link", { name: "Clientes" })).toHaveAttribute(
       "href",
       "/clientes",
+    );
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute(
+      "href",
+      "/leads",
     );
     expect(screen.getByRole("link", { name: "Contatos" })).toHaveAttribute(
       "href",
@@ -103,6 +107,45 @@ describe("Menu lateral", () => {
     expect(screen.getByRole("link", { name: "Clientes" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+
+  it("indica a área de leads como ativa na rota de leads", () => {
+    pathname.current = "/leads";
+    render(<AppSidebar />);
+
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Clientes" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(screen.getByRole("link", { name: "Contatos" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("posiciona Leads entre Clientes e Contatos na navegação", () => {
+    pathname.current = "/";
+    render(<AppSidebar />);
+
+    const links = Array.from(
+      screen
+        .getByRole("navigation", { name: "Navegação principal" })
+        .querySelectorAll("a"),
+    ).map((link) => {
+      link.querySelector('span[aria-hidden="true"]')?.remove();
+      return link.textContent;
+    });
+
+    expect(links).toEqual([
+      "Visão geral",
+      "Clientes",
+      "Leads",
+      "Contatos",
+      "Oportunidades",
+      "Tarefas",
+    ]);
   });
 
   it("indica somente a visão geral como ativa na página inicial", () => {
@@ -313,11 +356,12 @@ describe("Barra lateral recolhível", () => {
     const navigation = screen.getByRole("navigation", {
       name: "Navegação principal",
     });
-    expect(navigation.querySelectorAll("a")).toHaveLength(5);
+    expect(navigation.querySelectorAll("a")).toHaveLength(6);
 
     const destinations = [
       ["Visão geral", "/"],
       ["Clientes", "/clientes"],
+      ["Leads", "/leads"],
       ["Contatos", "/contatos"],
       ["Oportunidades", "/oportunidades"],
       ["Tarefas", "/tarefas"],
