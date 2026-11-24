@@ -24,16 +24,23 @@ describe("getDb", () => {
       .map((row) => (row as { name: string }).name);
     expect(tables).toEqual([
       "app_settings",
+      "cities",
       "clients",
       "contacts",
+      "countries",
       "events",
+      "industries",
+      "job_titles",
+      "lead_sources",
+      "leads",
       "opportunities",
       "schema_migrations",
+      "segments",
       "tasks",
     ]);
   });
 
-  it("registra as versões 001, 002 e 003 em schema_migrations no banco novo", () => {
+  it("registra as versões 001, 002, 003 e 004 em schema_migrations no banco novo", () => {
     const rows = getDb()
       .prepare("SELECT version, name FROM schema_migrations ORDER BY version")
       .all();
@@ -41,6 +48,7 @@ describe("getDb", () => {
       { version: "001", name: "contacts_soft_delete" },
       { version: "002", name: "app_settings" },
       { version: "003", name: "events" },
+      { version: "004", name: "leads" },
     ]);
   });
 });
