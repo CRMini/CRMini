@@ -104,11 +104,18 @@ describe("getDb com CRM_RESOURCES_DIR", () => {
 
     expect(tableNames(db)).toEqual([
       "app_settings",
+      "cities",
       "clients",
       "contacts",
+      "countries",
       "events",
+      "industries",
+      "job_titles",
+      "lead_sources",
+      "leads",
       "opportunities",
       "schema_migrations",
+      "segments",
       "tasks",
     ]);
   });
