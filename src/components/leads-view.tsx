@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import EmptyState from "@/components/empty-state";
 import { useEffect, useState } from "react";
@@ -101,6 +102,9 @@ export default function LeadsView() {
             Empresas em qualificação comercial antes de virarem clientes.
           </p>
         </div>
+        <Link className="primary-button" href="/leads/novo">
+          ＋ Novo lead
+        </Link>
       </header>
       <div className="contact-filters">
         <input
@@ -145,6 +149,11 @@ export default function LeadsView() {
             icon="◎"
             title="Nenhum lead cadastrado"
             description="Quando você começar o cadastro, os leads em qualificação aparecerão aqui."
+            action={
+              <Link className="text-link" href="/leads/novo">
+                Cadastrar primeiro lead →
+              </Link>
+            }
           />
         )
       ) : (
