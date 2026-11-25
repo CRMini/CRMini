@@ -228,15 +228,16 @@ describe("Tela de leads", () => {
     expect(fetchMock).toHaveBeenLastCalledWith("/api/leads?status=Desqualificado");
   });
 
-  it("não oferece criação de lead nesta etapa", async () => {
+  it("oferece a criação de lead no cabeçalho e no estado vazio", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(ok([]));
     render(<LeadsView />);
 
     await screen.findByRole("heading", { name: "Nenhum lead cadastrado" });
-    expect(document.querySelector('a[href="/leads/novo"]')).toBeNull();
-    expect(
-      screen.queryByRole("link", { name: /novo lead/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const links = screen.getAllByRole("link", {
+      name: /novo lead|primeiro lead/i,
+    });
+    expect(links).toHaveLength(2);
+    for (const link of links)
+      expect(link).toHaveAttribute("href", "/leads/novo");
   });
 });

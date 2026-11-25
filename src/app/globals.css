@@ -3194,3 +3194,38 @@ main.records-page .row-action:focus-visible::after {
   border: 0;
   min-height: 0;
 }
+
+/* Tela de leads — adicionar opção no combobox de referência */
+main.records-page .form-field-add-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+main.records-page .form-field-add-option input {
+  height: 38px;
+}
+
+/* Tela de leads — três seções do cadastro lado a lado */
+main.records-page .lead-form-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+main.records-page .lead-form-sections .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  main.records-page .lead-form-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  main.records-page .lead-form-sections .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 680px) {
+  main.records-page .lead-form-sections .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
