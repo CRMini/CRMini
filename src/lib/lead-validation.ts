@@ -183,6 +183,7 @@ const CONTACT_ADDRESS_FIELDS: Array<[LeadWriteColumn, string]> = [
   ["contact_street_number", "Informe o número do endereço do contato."],
   ["contact_neighborhood", "Informe o bairro do contato."],
   ["contact_city_id", "Selecione a cidade do contato."],
+  ["contact_state", "Selecione o estado do contato."],
   ["contact_postal_code", "Informe o CEP do contato."],
   ["contact_country_id", "Selecione o país do contato."],
 ];
@@ -195,6 +196,15 @@ function text(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+/** Campos opcionais chegam do formulário como string vazia, não como nulo. */
+function isBlank(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" && value.trim() === "")
+  );
 }
 
 function digits(value: string): string {
@@ -272,20 +282,17 @@ export function validateLeadCreation(
   if (contactEmail && !isValidEmail(contactEmail))
     return "E-mail do contato inválido.";
 
-  if (body.communication_type !== undefined && body.communication_type !== null) {
+  if (!isBlank(body.communication_type)) {
     if (!isOneOf(COMMUNICATION_TYPES, body.communication_type))
       return "Selecione um tipo de interação válido.";
   }
 
-  if (body.priority !== undefined && body.priority !== null) {
+  if (!isBlank(body.priority)) {
     if (!isOneOf(LEAD_PRIORITIES, body.priority))
       return "Selecione uma prioridade válida.";
   }
 
-  if (
-    body.expected_timeframe !== undefined &&
-    body.expected_timeframe !== null
-  ) {
+  if (!isBlank(body.expected_timeframe)) {
     if (!isOneOf(LEAD_TIMEFRAMES, body.expected_timeframe))
       return "Selecione uma previsão de prazo válida.";
   }
@@ -297,8 +304,7 @@ export function validateLeadCreation(
     ["bant_timing", BANT_TIMING_VALUES, "Selecione uma opção de prazo de compra (BANT) válida."],
   ] as const) {
     const value = body[field];
-    if (value !== undefined && value !== null && !isOneOf(values, value))
-      return message;
+    if (!isBlank(value) && !isOneOf(values, value)) return message;
   }
 
   const budget = text(body.budget);
