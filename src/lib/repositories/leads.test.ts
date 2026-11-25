@@ -6,7 +6,7 @@ vi.hoisted(() => {
 });
 
 import { getDb } from "@/lib/db";
-import { listLeads } from "./leads";
+import { createLead, createLeadReference, listLeadReferences, listLeads } from "./leads";
 
 // industries e segments começam vazias (sem seed), então os testes criam uma
 // entrada de cada para satisfazer as FKs NOT NULL de `leads`.
@@ -250,5 +250,171 @@ describe("restrições do schema", () => {
     expect(() =>
       insertLead({ contact_job_title_id: "job-title-inexistente" }),
     ).toThrow(/FOREIGN KEY/);
+  });
+});
+
+describe("listLeadReferences", () => {
+  it("devolve as seis listas de referência", async () => {
+    const references = await listLeadReferences();
+
+    expect(Object.keys(references).sort()).toEqual([
+      "cities",
+      "countries",
+      "industries",
+      "job_titles",
+      "lead_sources",
+      "segments",
+    ]);
+  });
+
+  it("traz os seeds de cidade, país, cargo e origem", async () => {
+    const references = await listLeadReferences();
+
+    expect(references.cities).toContainEqual({
+      id: "city-sao-paulo",
+      name: "São Paulo",
+    });
+    expect(references.countries).toContainEqual({
+      id: "country-brasil",
+      name: "Brasil",
+    });
+    expect(references.job_titles).toContainEqual({
+      id: "job-title-gerente-de-ti",
+      name: "Gerente de TI",
+    });
+    expect(references.lead_sources).toContainEqual({
+      id: "lead-source-outro",
+      name: "Outro",
+    });
+  });
+
+  it("ordena as listas em português", async () => {
+    getDb()
+      .prepare("INSERT INTO countries (id, name) VALUES (?, ?)")
+      .run("country-austria-teste", "Áustria");
+
+    const references = await listLeadReferences();
+    const names = references.countries.map((country) => country.name);
+
+    expect(names).toEqual(["Áustria", "Brasil", "México"]);
+
+    getDb()
+      .prepare("DELETE FROM countries WHERE id = ?")
+      .run("country-austria-teste");
+  });
+});
+
+describe("createLeadReference", () => {
+  it("cria a opção e devolve id e nome", async () => {
+    const created = await createLeadReference("industries", "Saúde");
+
+    expect(created).toMatchObject({ name: "Saúde" });
+    expect(created?.id).toBeTruthy();
+    expect(
+      getDb()
+        .prepare("SELECT name FROM industries WHERE id = ?")
+        .get(created?.id),
+    ).toEqual({ name: "Saúde" });
+
+    getDb()
+      .prepare("DELETE FROM industries WHERE id = ?")
+      .run(created?.id);
+  });
+
+  it("grava o nome sem espaços nas pontas", async () => {
+    const created = await createLeadReference("segments", "  Varejo  ");
+
+    expect(created?.name).toBe("Varejo");
+
+    getDb()
+      .prepare("DELETE FROM segments WHERE id = ?")
+      .run(created?.id);
+  });
+
+  it("devolve null quando a opção já existe", async () => {
+    expect(
+      await createLeadReference("cities", "São Paulo"),
+    ).toBeNull();
+  });
+});
+
+describe("createLead", () => {
+  const validLead = (overrides: Record<string, unknown> = {}) => ({
+    company_name: "Empresa Alfa Ltda.",
+    trade_name: "Alfa",
+    tax_id: "11222333000181",
+    industry_id: industryId,
+    segment_id: segmentId,
+    revenue_band: "Até R$ 10 milhões",
+    employee_band: "1-50",
+    street: "Rua Teste",
+    street_number: "100",
+    neighborhood: "Centro",
+    city_id: "city-sao-paulo",
+    state: "SP",
+    postal_code: "01000-000",
+    country_id: "country-brasil",
+    lead_source_id: "lead-source-site",
+    ...overrides,
+  });
+
+  it("cria o lead em Novo e devolve o id", async () => {
+    const created = await createLead(validLead());
+
+    expect(created?.id).toBeTruthy();
+    expect(
+      getDb()
+        .prepare(
+          "SELECT company_name, status, tax_id FROM leads WHERE id = ?",
+        )
+        .get(created?.id),
+    ).toEqual({
+      company_name: "Empresa Alfa Ltda.",
+      status: "Novo",
+      tax_id: "11222333000181",
+    });
+  });
+
+  it("persiste os campos opcionais informados", async () => {
+    const created = await createLead(
+      validLead({
+        contact_first_name: "Marina",
+        contact_email: "marina@example.com",
+        contact_job_title_id: "job-title-gerente-de-ti",
+        budget: "1234.56",
+        priority: "Alta",
+        contact_same_address: 0,
+        contact_street: "Rua do Contato",
+        contact_street_number: "20",
+        contact_neighborhood: "Centro",
+        contact_city_id: "city-santo-andre",
+        contact_postal_code: "09000-000",
+        contact_country_id: "country-brasil",
+      }),
+    );
+
+    expect(
+      getDb()
+        .prepare(
+          `SELECT contact_first_name, contact_email, contact_job_title_id,
+             budget, priority, contact_same_address, contact_city_id
+           FROM leads WHERE id = ?`,
+        )
+        .get(created?.id),
+    ).toEqual({
+      contact_first_name: "Marina",
+      contact_email: "marina@example.com",
+      contact_job_title_id: "job-title-gerente-de-ti",
+      budget: "1234.56",
+      priority: "Alta",
+      contact_same_address: 0,
+      contact_city_id: "city-santo-andre",
+    });
+  });
+
+  it("propaga violação de FK quando a referência não existe", async () => {
+    await expect(
+      createLead(validLead({ industry_id: "industry-inexistente" })),
+    ).rejects.toThrow(/FOREIGN KEY/);
   });
 });

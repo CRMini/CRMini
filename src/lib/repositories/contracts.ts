@@ -1,4 +1,8 @@
 import type { DashboardMetrics } from "@/lib/dashboard-metrics";
+import type {
+  LeadReference,
+  LeadReferenceType,
+} from "@/lib/lead-references";
 import type { RecentOpportunity } from "@/lib/recent-opportunities";
 
 /**
@@ -137,6 +141,12 @@ export interface LeadsRepository {
     search: string | null,
     status: string | null,
   ): Promise<Record<string, any>[]>;
+  listLeadReferences(): Promise<Record<LeadReferenceType, LeadReference[]>>;
+  createLeadReference(
+    type: LeadReferenceType,
+    name: string,
+  ): Promise<LeadReference | null>;
+  createLead(body: Record<string, unknown>): Promise<{ id: string } | null>;
 }
 
 export interface SettingsRepository {
