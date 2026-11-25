@@ -1,4 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
+import {
+  LEAD_REFERENCE_TABLES,
+  LEAD_REFERENCE_TYPES,
+  sortLeadReferences,
+  type LeadReference,
+  type LeadReferenceType,
+} from "@/lib/lead-references";
+import { LEAD_WRITE_COLUMNS, toLeadRecord } from "@/lib/lead-validation";
 import type { LeadsRepository } from "../contracts";
 
 /**
@@ -38,6 +47,57 @@ export async function listLeads(
     .all({ search, status }) as Record<string, any>[];
 }
 
+export async function listLeadReferences(): Promise<
+  Record<LeadReferenceType, LeadReference[]>
+> {
+  const db = getDb();
+  const references = {} as Record<LeadReferenceType, LeadReference[]>;
+  for (const type of LEAD_REFERENCE_TYPES) {
+    const rows = db
+      .prepare(`SELECT id, name FROM ${LEAD_REFERENCE_TABLES[type]}`)
+      .all() as LeadReference[];
+    references[type] = sortLeadReferences(rows);
+  }
+  return references;
+}
+
+export async function createLeadReference(
+  type: LeadReferenceType,
+  name: string,
+): Promise<LeadReference | null> {
+  const reference: LeadReference = { id: randomUUID(), name: name.trim() };
+  try {
+    getDb()
+      .prepare(
+        `INSERT INTO ${LEAD_REFERENCE_TABLES[type]} (id, name) VALUES (?, ?)`,
+      )
+      .run(reference.id, reference.name);
+    return reference;
+  } catch (error) {
+    if ((error as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE")
+      return null;
+    throw error;
+  }
+}
+
+export async function createLead(
+  body: Record<string, unknown>,
+): Promise<{ id: string } | null> {
+  const record = toLeadRecord(randomUUID(), body);
+  const columns = ["id", ...LEAD_WRITE_COLUMNS];
+  getDb()
+    .prepare(
+      `INSERT INTO leads (${columns.join(", ")}) VALUES (${columns
+        .map((column) => `@${column}`)
+        .join(", ")})`,
+    )
+    .run(record);
+  return { id: String(record.id) };
+}
+
 export const sqliteLeadsRepository: LeadsRepository = {
   listLeads,
+  listLeadReferences,
+  createLeadReference,
+  createLead,
 };

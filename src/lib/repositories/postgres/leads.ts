@@ -1,3 +1,16 @@
+import { randomUUID } from "node:crypto";
+import {
+  LEAD_REFERENCE_TABLES,
+  LEAD_REFERENCE_TYPES,
+  sortLeadReferences,
+  type LeadReference,
+  type LeadReferenceType,
+} from "@/lib/lead-references";
+import {
+  LEAD_WRITE_COLUMNS,
+  toLeadRecord,
+  type LeadWriteColumn,
+} from "@/lib/lead-validation";
 import type { LeadsRepository } from "../contracts";
 import { getPostgresPool } from "./connection";
 
@@ -37,6 +50,54 @@ export async function listLeads(
   return result.rows;
 }
 
+export async function listLeadReferences(): Promise<
+  Record<LeadReferenceType, LeadReference[]>
+> {
+  const pool = getPostgresPool();
+  const references = {} as Record<LeadReferenceType, LeadReference[]>;
+  for (const type of LEAD_REFERENCE_TYPES) {
+    const result = await pool.query<LeadReference>(
+      `SELECT id, name FROM ${LEAD_REFERENCE_TABLES[type]}`,
+    );
+    references[type] = sortLeadReferences(result.rows);
+  }
+  return references;
+}
+
+export async function createLeadReference(
+  type: LeadReferenceType,
+  name: string,
+): Promise<LeadReference | null> {
+  try {
+    const result = await getPostgresPool().query<LeadReference>(
+      `INSERT INTO ${LEAD_REFERENCE_TABLES[type]} (id, name) VALUES ($1, $2)
+       RETURNING id, name`,
+      [randomUUID(), name.trim()],
+    );
+    return result.rows[0] ?? null;
+  } catch (error) {
+    if ((error as { code?: string }).code === "23505") return null;
+    throw error;
+  }
+}
+
+export async function createLead(
+  body: Record<string, unknown>,
+): Promise<{ id: string } | null> {
+  const record = toLeadRecord(randomUUID(), body);
+  const columns: Array<LeadWriteColumn | "id"> = ["id", ...LEAD_WRITE_COLUMNS];
+  const result = await getPostgresPool().query<{ id: string }>(
+    `INSERT INTO leads (${columns.join(", ")}) VALUES (${columns
+      .map((_, index) => `$${index + 1}`)
+      .join(", ")}) RETURNING id`,
+    columns.map((column) => record[column]),
+  );
+  return result.rows[0] ?? null;
+}
+
 export const postgresLeadsRepository: LeadsRepository = {
   listLeads,
+  listLeadReferences,
+  createLeadReference,
+  createLead,
 };

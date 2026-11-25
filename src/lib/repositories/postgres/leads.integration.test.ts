@@ -240,4 +240,91 @@ describe.runIf(Boolean(testUrl))("leads no PostgreSQL real", () => {
       ).rejects.toThrow(/leads_contact_job_title_id_fkey/);
     });
   });
+
+  describe("referências", () => {
+    it("devolve as seis listas com os seeds", async () => {
+      const references = await repo.listLeadReferences();
+
+      expect(Object.keys(references).sort()).toEqual([
+        "cities",
+        "countries",
+        "industries",
+        "job_titles",
+        "lead_sources",
+        "segments",
+      ]);
+      expect(references.lead_sources).toContainEqual({
+        id: "lead-source-site",
+        name: "Site",
+      });
+      expect(references.cities).toContainEqual({
+        id: "city-sao-paulo",
+        name: "São Paulo",
+      });
+    });
+
+    it("cria uma opção e recusa duplicata", async () => {
+      const created = await repo.createLeadReference(
+        "industries",
+        "Saúde",
+      );
+
+      expect(created).toMatchObject({ name: "Saúde" });
+      expect(await repo.createLeadReference("industries", "Saúde")).toBeNull();
+    });
+  });
+
+  describe("createLead", () => {
+    it("cria o lead em Novo e devolve o id", async () => {
+      const created = await repo.createLead({
+        company_name: "Empresa Alfa Ltda.",
+        trade_name: "Alfa",
+        tax_id: "11222333000181",
+        industry_id: industryId,
+        segment_id: segmentId,
+        revenue_band: "Até R$ 10 milhões",
+        employee_band: "1-50",
+        street: "Rua Teste",
+        street_number: "100",
+        neighborhood: "Centro",
+        city_id: "city-sao-paulo",
+        state: "SP",
+        postal_code: "01000-000",
+        country_id: "country-brasil",
+        lead_source_id: "lead-source-site",
+      });
+
+      expect(created?.id).toBeTruthy();
+
+      const rows = await repo.listLeads(null, null);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        company_name: "Empresa Alfa Ltda.",
+        status: "Novo",
+        lead_source: "Site",
+      });
+    });
+
+    it("propaga violação de FK para referência inexistente", async () => {
+      await expect(
+        repo.createLead({
+          company_name: "Empresa Alfa Ltda.",
+          trade_name: "Alfa",
+          tax_id: "11222333000181",
+          industry_id: "industry-inexistente",
+          segment_id: segmentId,
+          revenue_band: "Até R$ 10 milhões",
+          employee_band: "1-50",
+          street: "Rua Teste",
+          street_number: "100",
+          neighborhood: "Centro",
+          city_id: "city-sao-paulo",
+          state: "SP",
+          postal_code: "01000-000",
+          country_id: "country-brasil",
+          lead_source_id: "lead-source-site",
+        }),
+      ).rejects.toThrow(/foreign key/i);
+    });
+  });
 });
