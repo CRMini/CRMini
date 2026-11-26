@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   toLeadRecord,
   toLeadUpdateRecord,
+  validateLeadConversion,
   validateLeadCreation,
   validateLeadUpdate,
 } from "./lead-validation";
@@ -319,5 +320,68 @@ describe("validateLeadUpdate", () => {
         status: "Novo",
       }),
     ).toBe("Informe a razão social.");
+  });
+});
+
+describe("validateLeadConversion", () => {
+  const convertibleLead = {
+    status: "Qualificando",
+    contact_first_name: "Marina",
+    contact_last_name: "Costa",
+    contact_email: "marina@example.com",
+  };
+
+  it("aceita lead em Qualificando com contato completo", () => {
+    expect(
+      validateLeadConversion(convertibleLead, { name: "Oportunidade" }),
+    ).toBeNull();
+  });
+
+  it("aceita lead em Em contato", () => {
+    expect(
+      validateLeadConversion(
+        { ...convertibleLead, status: "Em contato" },
+        { name: "Oportunidade" },
+      ),
+    ).toBeNull();
+  });
+
+  it("rejeita status fora da janela de conversão", () => {
+    expect(
+      validateLeadConversion(
+        { ...convertibleLead, status: "Novo" },
+        { name: "Oportunidade" },
+      ),
+    ).toBe("Só é possível converter leads em Em contato ou Qualificando.");
+  });
+
+  it("exige nome do contato", () => {
+    expect(
+      validateLeadConversion(
+        { ...convertibleLead, contact_first_name: "" },
+        { name: "Oportunidade" },
+      ),
+    ).toBe("Informe o nome do contato antes de converter.");
+  });
+
+  it("exige e-mail válido do contato", () => {
+    expect(
+      validateLeadConversion(
+        { ...convertibleLead, contact_email: "marina@" },
+        { name: "Oportunidade" },
+      ),
+    ).toBe("Informe um e-mail válido do contato antes de converter.");
+  });
+
+  it("valida a oportunidade com as regras da criação direta", () => {
+    expect(validateLeadConversion(convertibleLead, { name: "" })).toBe(
+      "Informe o nome da oportunidade.",
+    );
+    expect(
+      validateLeadConversion(convertibleLead, {
+        name: "Oportunidade",
+        value: "-1",
+      }),
+    ).toBe("O campo value deve ser um número não negativo.");
   });
 });

@@ -13,6 +13,7 @@ import {
   toLeadUpdateRecord,
 } from "@/lib/lead-validation";
 import type { LeadsRepository } from "../contracts";
+import { convertLead } from "./lead-conversion";
 
 /**
  * Listagem de leads (somente ativos), com as referências resolvidas por LEFT
@@ -131,4 +132,5 @@ export const sqliteLeadsRepository: LeadsRepository = {
   createLead,
   getLead,
   updateLead,
+  convertLead,
 };

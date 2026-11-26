@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonObject } from "@/lib/api-json";
+import { validateOpportunityFields } from "@/lib/opportunity-validation";
 import {
   createOpportunity,
   listOpportunities,
 } from "@/lib/repositories/opportunities";
 
 export const runtime = "nodejs";
-const statuses = [
-  "Em andamento",
-  "Desenvolvimento",
-  "Proposta",
-  "Aceite da proposta",
-  "Ganha",
-  "Perdida",
-];
-const reasons = ["Preço", "Prazo", "Tecnologia", "Solução"];
-const currencies = ["BRL", "USD", "EUR", "PES"];
 
 function validate(body: Record<string, unknown>) {
   if (
@@ -25,30 +16,7 @@ function validate(body: Record<string, unknown>) {
     typeof body.contact_id !== "string"
   )
     return "Informe nome, cliente e contato.";
-  if (!statuses.includes(String(body.status ?? "Em andamento")))
-    return "Status inválido.";
-  if (
-    body.status === "Perdida"
-      ? !reasons.includes(String(body.loss_reason))
-      : body.loss_reason != null && body.loss_reason !== ""
-  )
-    return "Informe um motivo apenas para oportunidades perdidas.";
-  for (const key of ["value", "budget", "project_hours"])
-    if (
-      body[key] != null &&
-      body[key] !== "" &&
-      (!Number.isFinite(Number(body[key])) || Number(body[key]) < 0)
-    )
-      return `O campo ${key} deve ser um número não negativo.`;
-  if (body.currency != null && !currencies.includes(String(body.currency)))
-    return "Moeda inválida.";
-  if (
-    body.budget_currency != null &&
-    body.budget_currency !== "" &&
-    !currencies.includes(String(body.budget_currency))
-  )
-    return "Moeda do budget inválida.";
-  return null;
+  return validateOpportunityFields(body);
 }
 
 export async function GET(request: NextRequest) {
