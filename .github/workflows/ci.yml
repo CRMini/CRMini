@@ -23,7 +23,7 @@ concurrency:
 jobs:
   # Suíte padrão: SQLite em memória, unidades e regras. Não depende de serviço
   # externo e é o job que aplica o piso de cobertura.
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -71,11 +71,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # Testes reais dos adaptadores PostgreSQL. Roda em paralelo ao job `test` e
+  # Testes reais dos adaptadores PostgreSQL. Roda em paralelo ao job `unit-tests` e
   # aparece como check próprio no PR. O serviço é descartável e os testes
   # aplicam o schema e limpam as tabelas entre os casos.
-  integration:
-    name: integration
+  integration-tests:
+    name: integration-tests
     runs-on: ubuntu-latest
     services:
       postgres:
