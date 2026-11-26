@@ -6,6 +6,10 @@
  */
 import { COMPANY_PROFILE_FIELDS } from "./company-profile";
 import { eventTypes } from "./event-validation";
+import {
+  LEAD_DISQUALIFICATION_REASONS,
+  LEAD_STATUSES,
+} from "./lead-status";
 
 const statuses = [
   "Em andamento",
@@ -85,6 +89,17 @@ const logoNameParameter: JsonSchema = {
   },
 };
 
+const leadStatusParameter: JsonSchema = {
+  name: "status",
+  in: "query",
+  required: false,
+  description:
+    "Filtra por um ou vários status. Repita o parâmetro para combinar valores.",
+  style: "form",
+  explode: true,
+  schema: { type: "array", items: { type: "string", enum: LEAD_STATUSES } },
+};
+
 const qParameter: JsonSchema = {
   name: "q",
   in: "query",
@@ -155,6 +170,10 @@ export const openApiDocument = {
   tags: [
     { name: "Clientes", description: "Empresas clientes e seus contatos." },
     { name: "Contatos", description: "Contatos vinculados a clientes." },
+    {
+      name: "Leads",
+      description: "Leads em qualificação e sua conversão em conta.",
+    },
     {
       name: "Oportunidades",
       description: "Oportunidades comerciais e seus status.",
@@ -375,6 +394,150 @@ export const openApiDocument = {
             "Corpo JSON inválido ou item fora das regras de validação (lote, `rowId`, cliente, nome, cargo, e-mail ou LinkedIn).",
           ),
           "500": errorResponse("Não foi possível importar os contatos."),
+        },
+      },
+    },
+    "/api/leads": {
+      get: {
+        operationId: "listLeads",
+        tags: ["Leads"],
+        summary: "Lista leads ativos",
+        parameters: [
+          {
+            name: "search",
+            in: "query",
+            required: false,
+            description:
+              "Busca por razão social, nome fantasia, contato ou CNPJ, sem diferenciar acentos e maiúsculas.",
+            schema: { type: "string" },
+          },
+          leadStatusParameter,
+        ],
+        responses: {
+          "200": {
+            description: "Leads encontrados, do mais recente para o mais antigo.",
+            content: {
+              "application/json": {
+                schema: { type: "array", items: ref("Lead") },
+              },
+            },
+          },
+          "400": errorResponse(
+            "Status inválido ou falha ao consultar os leads.",
+          ),
+        },
+      },
+      post: {
+        operationId: "createLead",
+        tags: ["Leads"],
+        summary: "Cadastra um lead",
+        description:
+          "O lead nasce sempre em Novo. Campos de qualificação e comunicação são opcionais; campos com opção Outro exigem o texto correspondente.",
+        requestBody: {
+          required: true,
+          content: jsonContent(ref("LeadInput")),
+        },
+        responses: {
+          "201": success("Lead criado.", ref("LeadCreated")),
+          "400": errorResponse(
+            "Corpo JSON inválido, campo obrigatório ausente, CNPJ/CEP/e-mail inválido, valor condicional ausente ou violação de constraint.",
+          ),
+          "500": errorResponse("Não foi possível cadastrar o lead."),
+        },
+      },
+    },
+    "/api/leads/{id}": {
+      parameters: [idParameter],
+      get: {
+        operationId: "getLead",
+        tags: ["Leads"],
+        summary: "Consulta um lead",
+        responses: {
+          "200": success("Lead encontrado, com todos os campos.", ref("Lead")),
+          "404": errorResponse("Lead não encontrado."),
+          "500": errorResponse("Não foi possível carregar o lead."),
+        },
+      },
+      put: {
+        operationId: "updateLead",
+        tags: ["Leads"],
+        summary: "Edita um lead e seu status",
+        description:
+          "O status só muda por transição permitida. Qualificado é consequência da conversão, não uma escolha. Desqualificado exige motivo e é terminal.",
+        requestBody: {
+          required: true,
+          content: jsonContent(ref("LeadUpdateInput")),
+        },
+        responses: {
+          "200": success("Lead atualizado.", ref("Lead")),
+          "400": errorResponse(
+            "Dados inválidos, transição de status não permitida ou motivo de desqualificação ausente.",
+          ),
+          "404": errorResponse("Lead não encontrado."),
+          "500": errorResponse("Não foi possível salvar o lead."),
+        },
+      },
+    },
+    "/api/leads/{id}/convert": {
+      parameters: [idParameter],
+      post: {
+        operationId: "convertLead",
+        tags: ["Leads"],
+        summary: "Converte o lead em empresa, contato e oportunidade",
+        description:
+          "Exige status Em contato ou Qualificando e contato com nome e e-mail. Cria as três entidades na mesma transação e promove o lead para Qualificado.",
+        requestBody: {
+          required: true,
+          content: jsonContent(ref("LeadConversionInput")),
+        },
+        responses: {
+          "201": success(
+            "Lead convertido.",
+            ref("LeadConversionResult"),
+          ),
+          "400": errorResponse(
+            "Lead fora da janela de conversão, contato sem nome ou e-mail válido, ou oportunidade inválida.",
+          ),
+          "404": errorResponse("Lead não encontrado."),
+          "409": errorResponse("O lead não pode mais ser convertido."),
+          "500": errorResponse("Não foi possível converter o lead."),
+        },
+      },
+    },
+    "/api/leads/references": {
+      get: {
+        operationId: "listLeadReferences",
+        tags: ["Leads"],
+        summary: "Lista as opções das listas extensíveis",
+        description:
+          "Devolve setor, segmento, cidade, país, cargo e origem, ordenados em português.",
+        responses: {
+          "200": {
+            description: "As seis listas de referência.",
+            content: {
+              "application/json": {
+                schema: ref("LeadReferences"),
+              },
+            },
+          },
+          "400": errorResponse("Não foi possível carregar as opções."),
+        },
+      },
+      post: {
+        operationId: "createLeadReference",
+        tags: ["Leads"],
+        summary: "Adiciona uma opção a uma lista extensível",
+        requestBody: {
+          required: true,
+          content: jsonContent(ref("LeadReferenceInput")),
+        },
+        responses: {
+          "201": success("Opção criada.", ref("LeadReference")),
+          "400": errorResponse(
+            "Tipo inválido, nome vazio ou acima de 80 caracteres.",
+          ),
+          "409": errorResponse("Essa opção já existe."),
+          "500": errorResponse("Não foi possível salvar a opção."),
         },
       },
     },
@@ -907,6 +1070,263 @@ export const openApiDocument = {
           linkedin_url: nullableString("URL do perfil no LinkedIn."),
           notes: nullableString("Observações."),
           is_primary: { type: "boolean" },
+        },
+      },
+      LeadInput: {
+        type: "object",
+        description: "Campos aceitos na criação do lead.",
+        required: [
+          "company_name",
+          "trade_name",
+          "tax_id",
+          "industry_id",
+          "segment_id",
+          "revenue_band",
+          "employee_band",
+          "street",
+          "street_number",
+          "neighborhood",
+          "city_id",
+          "state",
+          "postal_code",
+          "country_id",
+          "lead_source_id",
+        ],
+        properties: {
+          company_name: { type: "string" },
+          trade_name: { type: "string" },
+          tax_id: { type: "string", description: "CNPJ com ou sem máscara." },
+          industry_id: { type: "string" },
+          segment_id: { type: "string" },
+          revenue_band: {
+            type: "string",
+            enum: [
+              "Até R$ 10 milhões",
+              "R$ 10 milhões a R$ 50 milhões",
+              "R$ 50 milhões a R$ 100 milhões",
+              "R$ 100 milhões a R$ 500 milhões",
+              "R$ 500 milhões a R$ 1 bilhão",
+              "Acima de R$ 1 bilhão",
+            ],
+          },
+          employee_band: {
+            type: "string",
+            enum: ["1-50", "51-200", "201-500", "501-1.000", "+1.001"],
+          },
+          street: { type: "string" },
+          street_number: { type: "string" },
+          complement: nullableString(),
+          neighborhood: { type: "string" },
+          city_id: { type: "string" },
+          state: { type: "string", description: "Sigla da UF." },
+          postal_code: { type: "string", description: "CEP com ou sem máscara." },
+          country_id: { type: "string" },
+          website: nullableString(),
+          description: nullableString(),
+          lead_source_id: { type: "string" },
+          lead_source_other: nullableString(
+            "Obrigatório quando a origem é a opção Outro.",
+          ),
+          contact_first_name: nullableString(),
+          contact_last_name: nullableString(),
+          contact_email: nullableString("Validado apenas por formato."),
+          contact_phone: nullableString(),
+          contact_job_title_id: nullableString(),
+          contact_same_address: {
+            type: ["integer", "boolean"],
+            description: "1/true quando o endereço do contato é o da empresa.",
+          },
+          contact_street: nullableString(),
+          contact_street_number: nullableString(),
+          contact_complement: nullableString(),
+          contact_neighborhood: nullableString(),
+          contact_city_id: nullableString(),
+          contact_state: nullableString(),
+          contact_postal_code: nullableString(),
+          contact_country_id: nullableString(),
+          desired_solution: nullableString(),
+          identified_pain: nullableString(),
+          priority: {
+            type: ["string", "null"],
+            enum: [null, "Baixa", "Média", "Alta", "Urgente"],
+          },
+          expected_timeframe: {
+            type: ["string", "null"],
+            enum: [null, "Imediato", "3 meses", "6 meses", "12 meses", "Sem Previsão"],
+          },
+          budget: decimalInput("Budget em BRL."),
+          bant_budget: { type: ["string", "null"], enum: [null, "Sim", "Não", "Em Definição"] },
+          bant_authority: {
+            type: ["string", "null"],
+            enum: [null, "Sim", "Influenciador", "Usuário", "Compras", "Outro"],
+          },
+          bant_authority_other: nullableString(
+            "Obrigatório quando o decisor é Outro.",
+          ),
+          bant_need: { type: ["string", "null"], enum: [null, "Sim", "Parcial", "Não"] },
+          bant_timing: { type: ["string", "null"], enum: [null, "Curto", "Médio", "Longo"] },
+          contact_history: nullableString(),
+          communication_type: {
+            type: ["string", "null"],
+            enum: [null, "Ligação", "E-mail", "WhatsApp", "Reunião", "Demonstração"],
+          },
+          next_interaction_date: nullableString("Data civil YYYY-MM-DD."),
+          next_interaction_time: nullableString("Hora HH:MM."),
+        },
+      },
+      LeadUpdateInput: {
+        allOf: [
+          ref("LeadInput"),
+          {
+            type: "object",
+            required: ["status"],
+            properties: {
+              status: { type: "string", enum: LEAD_STATUSES },
+              disqualification_reason: {
+                type: ["string", "null"],
+                enum: [null, ...LEAD_DISQUALIFICATION_REASONS],
+                description:
+                  "Obrigatório em Desqualificado e proibido nos demais status.",
+              },
+            },
+          },
+        ],
+      },
+      LeadCreated: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string", format: "uuid" } },
+      },
+      Lead: {
+        type: "object",
+        description: "Lead com todos os campos persistidos.",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          company_name: { type: "string" },
+          trade_name: { type: "string" },
+          tax_id: { type: "string" },
+          industry_id: { type: "string" },
+          segment_id: { type: "string" },
+          revenue_band: { type: "string" },
+          employee_band: { type: "string" },
+          street: { type: "string" },
+          street_number: { type: "string" },
+          complement: nullableString(),
+          neighborhood: { type: "string" },
+          city_id: { type: "string" },
+          state: { type: "string" },
+          postal_code: { type: "string" },
+          country_id: { type: "string" },
+          website: nullableString(),
+          description: nullableString(),
+          lead_source_id: { type: "string" },
+          lead_source_other: nullableString(),
+          contact_first_name: nullableString(),
+          contact_last_name: nullableString(),
+          contact_email: nullableString(),
+          contact_phone: nullableString(),
+          contact_job_title_id: nullableString(),
+          contact_same_address: { type: "integer", enum: [0, 1] },
+          contact_street: nullableString(),
+          contact_street_number: nullableString(),
+          contact_complement: nullableString(),
+          contact_neighborhood: nullableString(),
+          contact_city_id: nullableString(),
+          contact_state: nullableString(),
+          contact_postal_code: nullableString(),
+          contact_country_id: nullableString(),
+          desired_solution: nullableString(),
+          identified_pain: nullableString(),
+          priority: nullableString(),
+          expected_timeframe: nullableString(),
+          budget: decimalInput("Budget em BRL, em texto decimal canônico."),
+          bant_budget: nullableString(),
+          bant_authority: nullableString(),
+          bant_authority_other: nullableString(),
+          bant_need: nullableString(),
+          bant_timing: nullableString(),
+          contact_history: nullableString(),
+          communication_type: nullableString(),
+          next_interaction_date: nullableString(),
+          next_interaction_time: nullableString(),
+          status: { type: "string", enum: LEAD_STATUSES },
+          disqualification_reason: nullableString(),
+          opportunity_id: nullableString("Preenchido só após a conversão."),
+          converted_at: nullableString("Instante ISO-8601 em UTC."),
+          is_active: { type: "integer", enum: [0, 1] },
+          created_at: { type: "string" },
+          updated_at: { type: "string" },
+        },
+      },
+      LeadConversionInput: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", description: "Nome da oportunidade." },
+          value: decimalInput("Valor da oportunidade."),
+          currency: { type: "string", enum: currencies },
+          technology: nullableString(),
+          service_type: nullableString(),
+          resources: nullableString(),
+          budget: decimalInput("Se ausente, herda o budget do lead."),
+          budget_currency: { type: ["string", "null"], enum: [null, ...currencies] },
+          notes: nullableString("Se ausente, herda o histórico do contato."),
+          customer_need: nullableString("Se ausente, herda a dor identificada."),
+          offered_solution: nullableString("Se ausente, herda a solução desejada."),
+          project_hours: decimalInput("Horas de projeto."),
+          opened_at: nullableString("Data civil YYYY-MM-DD."),
+          expected_close_at: nullableString("Data civil YYYY-MM-DD."),
+          status: { type: "string", enum: statuses },
+          loss_reason: {
+            type: ["string", "null"],
+            enum: [null, ...lossReasons],
+          },
+        },
+      },
+      LeadConversionResult: {
+        type: "object",
+        required: ["client_id", "contact_id", "opportunity_id"],
+        properties: {
+          client_id: { type: "string", format: "uuid" },
+          contact_id: { type: "string", format: "uuid" },
+          opportunity_id: { type: "string", format: "uuid" },
+        },
+      },
+      LeadReference: {
+        type: "object",
+        required: ["id", "name"],
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+        },
+      },
+      LeadReferenceInput: {
+        type: "object",
+        required: ["type", "name"],
+        properties: {
+          type: {
+            type: "string",
+            enum: [
+              "industries",
+              "segments",
+              "cities",
+              "countries",
+              "job_titles",
+              "lead_sources",
+            ],
+          },
+          name: { type: "string", description: "Até 80 caracteres." },
+        },
+      },
+      LeadReferences: {
+        type: "object",
+        properties: {
+          industries: { type: "array", items: ref("LeadReference") },
+          segments: { type: "array", items: ref("LeadReference") },
+          cities: { type: "array", items: ref("LeadReference") },
+          countries: { type: "array", items: ref("LeadReference") },
+          job_titles: { type: "array", items: ref("LeadReference") },
+          lead_sources: { type: "array", items: ref("LeadReference") },
         },
       },
       ClientInput: {
