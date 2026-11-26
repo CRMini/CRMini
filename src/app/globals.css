@@ -3239,3 +3239,16 @@ main.records-page .lead-row {
 main.records-page .lead-row .contact-row-actions {
   justify-self: end;
 }
+
+/* Tela de leads — seção de conversão do lead */
+main.records-page .lead-conversion {
+  margin-top: 15px;
+}
+main.records-page .lead-conversion .form-grid > :first-child {
+  grid-column: 1 / -1;
+}
+main.records-page .lead-conversion-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
