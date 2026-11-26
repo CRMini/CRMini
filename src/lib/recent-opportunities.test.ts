@@ -27,7 +27,9 @@ describe("getRecentOpportunities", () => {
     expect(receivedQuery).toContain(
       "JOIN contacts p ON p.id=o.contact_id AND p.client_id=o.client_id",
     );
-    expect(receivedQuery).toContain("ORDER BY o.created_at DESC LIMIT 4");
+    expect(receivedQuery).toContain(
+      "ORDER BY o.created_at DESC, o.id DESC LIMIT 4",
+    );
   });
 
   it("retorna lista vazia quando não há oportunidades", async () => {
