@@ -7,7 +7,11 @@ import {
   type LeadReference,
   type LeadReferenceType,
 } from "@/lib/lead-references";
-import { LEAD_WRITE_COLUMNS, toLeadRecord } from "@/lib/lead-validation";
+import {
+  LEAD_WRITE_COLUMNS,
+  toLeadRecord,
+  toLeadUpdateRecord,
+} from "@/lib/lead-validation";
 import type { LeadsRepository } from "../contracts";
 
 /**
@@ -95,9 +99,36 @@ export async function createLead(
   return { id: String(record.id) };
 }
 
+export async function getLead(
+  id: string,
+): Promise<Record<string, any> | null> {
+  const row = getDb().prepare("SELECT * FROM leads WHERE id = ?").get(id);
+  return (row as Record<string, any> | undefined) ?? null;
+}
+
+export async function updateLead(
+  id: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, any> | null> {
+  const record = toLeadUpdateRecord(body);
+  const columns = Object.keys(record) as Array<keyof typeof record>;
+  const result = getDb()
+    .prepare(
+      `UPDATE leads
+       SET ${columns.map((column) => `${column} = @${column}`).join(", ")},
+         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE id = @id`,
+    )
+    .run({ ...record, id });
+  if (result.changes === 0) return null;
+  return getLead(id);
+}
+
 export const sqliteLeadsRepository: LeadsRepository = {
   listLeads,
   listLeadReferences,
   createLeadReference,
   createLead,
+  getLead,
+  updateLead,
 };

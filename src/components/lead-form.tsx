@@ -26,6 +26,12 @@ import {
 } from "@/lib/lead-validation";
 import type { LeadReference, LeadReferenceType } from "@/lib/lead-references";
 import { sortLeadReferences } from "@/lib/lead-references";
+import {
+  LEAD_DISQUALIFICATION_REASONS,
+  allowedLeadStatusTransitions,
+  isLeadStatus,
+  type LeadStatus,
+} from "@/lib/lead-status";
 
 type References = Record<LeadReferenceType, LeadReference[]>;
 
@@ -340,7 +346,16 @@ function TextareaField({
   );
 }
 
-export default function LeadForm() {
+function toFormData(lead: Record<string, unknown>): LeadFormData {
+  const form = { ...EMPTY_FORM };
+  for (const key of Object.keys(EMPTY_FORM) as Array<keyof LeadFormData>) {
+    const value = lead[key];
+    form[key] = typeof value === "string" ? value : "";
+  }
+  return form;
+}
+
+export default function LeadForm({ leadId }: { leadId?: string }) {
   const router = useRouter();
   const [data, setData] = useState<LeadFormData>(EMPTY_FORM);
   const [sameAddress, setSameAddress] = useState(true);
@@ -349,6 +364,9 @@ export default function LeadForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [cepErrors, setCepErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(Boolean(leadId));
+  const [status, setStatus] = useState<LeadStatus | "">("");
+  const [disqualificationReason, setDisqualificationReason] = useState("");
   const cepRequestId = useRef({ company: 0, contact: 0 });
 
   useEffect(() => {
@@ -367,6 +385,32 @@ export default function LeadForm() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!leadId) return;
+    let active = true;
+    fetch(`/api/leads/${leadId}`)
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok)
+          throw new Error(body.error || "Não foi possível carregar o lead.");
+        if (!active) return;
+        setData(toFormData(body));
+        setSameAddress(Number(body.contact_same_address) === 1);
+        if (typeof body.status === "string" && isLeadStatus(body.status))
+          setStatus(body.status);
+        setDisqualificationReason(body.disqualification_reason ?? "");
+      })
+      .catch((reason: Error) => {
+        if (active) setError(reason.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [leadId]);
 
   function update<K extends keyof LeadFormData>(
     key: K,
@@ -519,14 +563,24 @@ export default function LeadForm() {
     setSaving(true);
     setError("");
     try {
-      const response = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          contact_same_address: sameAddress ? 1 : 0,
-        }),
-      });
+      const response = await fetch(
+        leadId ? `/api/leads/${leadId}` : "/api/leads",
+        {
+          method: leadId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...data,
+            contact_same_address: sameAddress ? 1 : 0,
+            ...(leadId
+              ? {
+                  status,
+                  disqualification_reason:
+                    status === "Desqualificado" ? disqualificationReason : "",
+                }
+              : {}),
+          }),
+        },
+      );
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.error || "Não foi possível salvar o lead.");
@@ -539,22 +593,41 @@ export default function LeadForm() {
     }
   }
 
+  const statusOptions: LeadStatus[] = isLeadStatus(status)
+    ? [status, ...allowedLeadStatusTransitions(status)]
+    : [];
+
+  if (loading)
+    return (
+      <main className="records-page">
+        <Breadcrumbs
+          items={[
+            { label: "Meu espaço", href: "/" },
+            { label: "Leads", href: "/leads" },
+            { label: "Editar lead" },
+          ]}
+        />
+        <p role="status">Carregando lead...</p>
+      </main>
+    );
+
   return (
     <main className="records-page">
       <Breadcrumbs
         items={[
           { label: "Meu espaço", href: "/" },
           { label: "Leads", href: "/leads" },
-          { label: "Novo lead" },
+          { label: leadId ? "Editar lead" : "Novo lead" },
         ]}
       />
       <header className="records-header">
         <div>
           <p className="eyebrow">CADASTRO</p>
-          <h1>Novo lead</h1>
+          <h1>{leadId ? "Editar lead" : "Novo lead"}</h1>
           <p className="subheading">
-            Registre a empresa prospectada, o contato e a qualificação
-            comercial.
+            {leadId
+              ? "Atualize os dados e o andamento da qualificação."
+              : "Registre a empresa prospectada, o contato e a qualificação comercial."}
           </p>
         </div>
         <Link className="text-link" href="/leads">
@@ -889,6 +962,49 @@ export default function LeadForm() {
                 onChange={(value) => update("bant_timing", value)}
                 values={BANT_TIMING_VALUES}
               />
+              {leadId && (
+                <>
+                  <div className="form-field">
+                    <label htmlFor="lead-status">Status do lead</label>
+                    <select
+                      id="lead-status"
+                      value={status}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (isLeadStatus(value)) setStatus(value);
+                      }}
+                    >
+                      {statusOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {status === "Desqualificado" && (
+                    <div className="form-field">
+                      <label htmlFor="lead-disqualification">
+                        Motivo da desqualificação
+                      </label>
+                      <select
+                        id="lead-disqualification"
+                        required
+                        value={disqualificationReason}
+                        onChange={(event) =>
+                          setDisqualificationReason(event.target.value)
+                        }
+                      >
+                        <option value="">Selecione</option>
+                        {LEAD_DISQUALIFICATION_REASONS.map((reason) => (
+                          <option key={reason} value={reason}>
+                            {reason}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </section>
 

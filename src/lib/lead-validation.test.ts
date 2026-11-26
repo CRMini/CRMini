@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   toLeadRecord,
+  toLeadUpdateRecord,
   validateLeadCreation,
+  validateLeadUpdate,
 } from "./lead-validation";
 
 function validLead(overrides: Record<string, unknown> = {}) {
@@ -222,5 +224,100 @@ describe("toLeadRecord", () => {
       toLeadRecord("lead-1", validLead({ contact_same_address: false }))
         .contact_same_address,
     ).toBe(0);
+  });
+});
+
+describe("validateLeadUpdate", () => {
+  const current = { status: "Novo" as const };
+
+  it("aceita edição sem mudar o status", () => {
+    expect(
+      validateLeadUpdate(current, { ...validLead(), status: "Novo" }),
+    ).toBeNull();
+  });
+
+  it("aceita transição permitida", () => {
+    expect(
+      validateLeadUpdate(current, { ...validLead(), status: "Em contato" }),
+    ).toBeNull();
+  });
+
+  it("rejeita transição não permitida", () => {
+    expect(
+      validateLeadUpdate(
+        { status: "Qualificando" },
+        { ...validLead(), status: "Novo" },
+      ),
+    ).toBe("Essa mudança de status não é permitida.");
+  });
+
+  it("rejeita promoção manual para Qualificado", () => {
+    expect(
+      validateLeadUpdate(current, { ...validLead(), status: "Qualificado" }),
+    ).toBe("Essa mudança de status não é permitida.");
+  });
+
+  it("rejeita status fora do enum", () => {
+    expect(
+      validateLeadUpdate(current, { ...validLead(), status: "Invalido" }),
+    ).toBe("Selecione um status válido.");
+  });
+
+  it("exige motivo ao desqualificar", () => {
+    expect(
+      validateLeadUpdate(current, { ...validLead(), status: "Desqualificado" }),
+    ).toBe("Selecione o motivo da desqualificação.");
+  });
+
+  it("rejeita motivo fora da lista", () => {
+    expect(
+      validateLeadUpdate(current, {
+        ...validLead(),
+        status: "Desqualificado",
+        disqualification_reason: "Outro",
+      }),
+    ).toBe("Motivo de desqualificação inválido.");
+  });
+
+  it("aceita desqualificação com motivo válido", () => {
+    expect(
+      validateLeadUpdate(current, {
+        ...validLead(),
+        status: "Desqualificado",
+        disqualification_reason: "Prazo",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejeita motivo quando o status não é Desqualificado", () => {
+    expect(
+      validateLeadUpdate(current, {
+        ...validLead(),
+        status: "Em contato",
+        disqualification_reason: "Prazo",
+      }),
+    ).toBe("O motivo de desqualificação só existe em lead desqualificado.");
+  });
+
+  it("não permite sair de Desqualificado", () => {
+    expect(
+      validateLeadUpdate(
+        { status: "Desqualificado" },
+        {
+          ...validLead(),
+          status: "Em contato",
+          disqualification_reason: "",
+        },
+      ),
+    ).toBe("Essa mudança de status não é permitida.");
+  });
+
+  it("valida os campos como na criação", () => {
+    expect(
+      validateLeadUpdate(current, {
+        ...validLead({ company_name: "" }),
+        status: "Novo",
+      }),
+    ).toBe("Informe a razão social.");
   });
 });
