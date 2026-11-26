@@ -47,7 +47,7 @@ function companyInitials(lead: Lead): string {
 export default function LeadsView() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
+  const [statuses, setStatuses] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +57,7 @@ export default function LeadsView() {
       setLoading(true);
       const params = new URLSearchParams();
       if (query.trim()) params.set("search", query.trim());
-      if (status) params.set("status", status);
+      for (const item of statuses) params.append("status", item);
       fetch(`/api/leads${params.size ? `?${params}` : ""}`)
         .then(async (response) => {
           const data = await response.json();
@@ -75,7 +75,7 @@ export default function LeadsView() {
           if (active) setLoading(false);
         });
     };
-    if (!query && !status) load();
+    if (!query && !statuses.length) load();
     else {
       const timer = setTimeout(load, 200);
       return () => {
@@ -86,9 +86,17 @@ export default function LeadsView() {
     return () => {
       active = false;
     };
-  }, [query, status]);
+  }, [query, statuses]);
 
-  const hasFilter = query.trim() !== "" || status !== "";
+  const hasFilter = query.trim() !== "" || statuses.length > 0;
+
+  function toggleStatus(status: string) {
+    setStatuses((current) =>
+      current.includes(status)
+        ? current.filter((item) => item !== status)
+        : [...current, status],
+    );
+  }
 
   return (
     <main className="records-page">
@@ -114,21 +122,24 @@ export default function LeadsView() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <label>
-          <span>Status</span>
-          <select
-            aria-label="Filtrar por status"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="">Todos</option>
+        <details className="lead-status-filter">
+          <summary className="filter-button">
+            Status
+            {statuses.length > 0 && ` (${statuses.length})`}
+          </summary>
+          <div className="lead-status-options" role="group" aria-label="Status do lead">
             {LEAD_STATUSES.map((item) => (
-              <option key={item} value={item}>
+              <label key={item} className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={statuses.includes(item)}
+                  onChange={() => toggleStatus(item)}
+                />
                 {item}
-              </option>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </details>
         <span className="contact-count">{leads.length} lead(s)</span>
       </div>
       {error && (

@@ -23,7 +23,7 @@ import { convertLead } from "./lead-conversion";
  */
 export async function listLeads(
   search: string | null,
-  status: string | null,
+  statuses: string[] | null,
 ): Promise<Record<string, any>[]> {
   const result = await getPostgresPool().query<Record<string, any>>(
     `SELECT l.id, l.company_name, l.trade_name, l.tax_id,
@@ -45,9 +45,9 @@ export async function listLeads(
          OR crm_normalize(l.contact_first_name) LIKE '%' || crm_normalize($1::text) || '%'
          OR crm_normalize(l.contact_last_name) LIKE '%' || crm_normalize($1::text) || '%'
          OR crm_normalize(l.tax_id) LIKE '%' || crm_normalize($1::text) || '%')
-       AND ($2::text IS NULL OR l.status = $2::text)
+       AND ($2::text[] IS NULL OR l.status = ANY($2::text[]))
      ORDER BY l.updated_at DESC`,
-    [search, status],
+    [search, statuses?.length ? statuses : null],
   );
   return result.rows;
 }

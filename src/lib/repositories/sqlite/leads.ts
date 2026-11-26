@@ -23,8 +23,17 @@ import { convertLead } from "./lead-conversion";
  */
 export async function listLeads(
   search: string | null,
-  status: string | null,
+  statuses: string[] | null,
 ): Promise<Record<string, any>[]> {
+  const filters = statuses?.length ? statuses : null;
+  const statusParams = Object.fromEntries(
+    (filters ?? []).map((status, index) => [`status${index}`, status]),
+  );
+  const statusClause = filters
+    ? `AND l.status IN (${filters
+        .map((_, index) => `@status${index}`)
+        .join(", ")})`
+    : "";
   return getDb()
     .prepare(
       `SELECT l.id, l.company_name, l.trade_name, l.tax_id,
@@ -46,10 +55,10 @@ export async function listLeads(
            OR normalize(l.contact_first_name) LIKE '%' || normalize(@search) || '%'
            OR normalize(l.contact_last_name) LIKE '%' || normalize(@search) || '%'
            OR normalize(l.tax_id) LIKE '%' || normalize(@search) || '%')
-         AND (@status IS NULL OR l.status = @status)
+         ${statusClause}
        ORDER BY l.updated_at DESC`,
     )
-    .all({ search, status }) as Record<string, any>[];
+    .all({ search, ...statusParams }) as Record<string, any>[];
 }
 
 export async function listLeadReferences(): Promise<

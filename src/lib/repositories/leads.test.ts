@@ -166,11 +166,16 @@ describe("listLeads", () => {
     expect(await listLeads("888777", null)).toHaveLength(1);
   });
 
-  it("filtra por status", async () => {
+  it("filtra por um ou vários status", async () => {
     insertLead({ status: "Novo" });
     insertLead({ status: "Em contato" });
+    insertLead({ status: "Qualificando" });
 
-    expect(await listLeads(null, "Em contato")).toHaveLength(1);
+    expect(await listLeads(null, ["Em contato"])).toHaveLength(1);
+    expect(
+      await listLeads(null, ["Novo", "Qualificando"]),
+    ).toHaveLength(2);
+    expect(await listLeads(null, [])).toHaveLength(3);
   });
 
   it("não lista leads desativados (is_active = 0)", async () => {

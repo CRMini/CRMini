@@ -176,9 +176,7 @@ describe("Tela de leads", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(ok([]));
     render(<LeadsView />);
 
-    fireEvent.change(screen.getByLabelText("Filtrar por status"), {
-      target: { value: "Novo" },
-    });
+    fireEvent.click(screen.getByLabelText("Novo"));
 
     expect(
       await screen.findByRole("heading", { name: "Nenhum lead encontrado" }),
@@ -215,13 +213,13 @@ describe("Tela de leads", () => {
     });
     expect(fetchMock).toHaveBeenLastCalledWith("/api/leads?search=alfa");
 
-    fireEvent.change(screen.getByLabelText("Filtrar por status"), {
-      target: { value: "Novo" },
-    });
+    fireEvent.click(screen.getByLabelText("Novo"));
     await act(async () => {
       vi.advanceTimersByTime(200);
     });
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/leads?search=alfa&status=Novo");
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/leads?search=alfa&status=Novo",
+    );
   });
 
   it("o filtro de status dispara uma nova busca", async () => {
@@ -231,15 +229,43 @@ describe("Tela de leads", () => {
     await flush();
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    fireEvent.change(screen.getByLabelText("Filtrar por status"), {
-      target: { value: "Desqualificado" },
-    });
+    fireEvent.click(screen.getByLabelText("Desqualificado"));
     await act(async () => {
       vi.advanceTimersByTime(200);
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/leads?status=Desqualificado");
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/leads?status=Desqualificado",
+    );
+  });
+
+  it("permite marcar vários status e desmarcar", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(ok([]));
+    render(<LeadsView />);
+    await flush();
+
+    fireEvent.click(screen.getByLabelText("Novo"));
+    fireEvent.click(screen.getByLabelText("Qualificando"));
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/leads?status=Novo&status=Qualificando",
+    );
+    expect(screen.getByLabelText("Novo")).toBeChecked();
+
+    fireEvent.click(screen.getByLabelText("Novo"));
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/leads?status=Qualificando",
+    );
+    expect(screen.getByLabelText("Novo")).not.toBeChecked();
   });
 
   it("oferece a criação de lead no cabeçalho e no estado vazio", async () => {

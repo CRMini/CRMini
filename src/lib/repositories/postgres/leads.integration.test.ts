@@ -171,11 +171,15 @@ describe.runIf(Boolean(testUrl))("leads no PostgreSQL real", () => {
       expect(await repo.listLeads("JOSE", null)).toHaveLength(1);
     });
 
-    it("filtra por status", async () => {
+    it("filtra por um ou vários status", async () => {
       await insertLead({ status: "Novo" });
       await insertLead({ status: "Em contato" });
+      await insertLead({ status: "Qualificando" });
 
-      expect(await repo.listLeads(null, "Em contato")).toHaveLength(1);
+      expect(await repo.listLeads(null, ["Em contato"])).toHaveLength(1);
+      expect(
+        await repo.listLeads(null, ["Novo", "Qualificando"]),
+      ).toHaveLength(2);
     });
 
     it("não lista leads desativados (is_active = 0)", async () => {

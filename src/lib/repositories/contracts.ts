@@ -145,7 +145,7 @@ export type LeadConversionResult = {
 export interface LeadsRepository {
   listLeads(
     search: string | null,
-    status: string | null,
+    statuses: string[] | null,
   ): Promise<Record<string, any>[]>;
   listLeadReferences(): Promise<Record<LeadReferenceType, LeadReference[]>>;
   createLeadReference(
