@@ -94,20 +94,26 @@ export async function convertLead(
     const clientId = randomUUID();
     await client.query(
       `INSERT INTO clients (id, company_name, trade_name, tax_id, industry,
-         website, postal_code, street, street_number, complement, city, state,
+         segment, revenue_band, employee_band, website, postal_code, street,
+         street_number, complement, neighborhood, lead_source, city, state,
          country, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [
         clientId,
         lead.company_name,
         lead.trade_name,
         lead.tax_id,
         await nameOf("industries", lead.industry_id),
+        await nameOf("segments", lead.segment_id),
+        lead.revenue_band,
+        lead.employee_band,
         lead.website,
         lead.postal_code,
         lead.street,
         lead.street_number,
         lead.complement,
+        lead.neighborhood,
+        await nameOf("lead_sources", lead.lead_source_id),
         await nameOf("cities", lead.city_id),
         lead.state,
         await nameOf("countries", lead.country_id),
