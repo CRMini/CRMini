@@ -196,10 +196,16 @@ describe.runIf(Boolean(testUrl))("dashboard no PostgreSQL real", () => {
     it("limita a quatro oportunidades ordenadas por created_at desc", async () => {
       const { clientId, contactId } = await createCompany("Limite Ltda.");
 
+      // created_at explícito e distinto: inserts no mesmo milissegundo empatam
+      // e a ordenação "mais recentes" ficaria indefinida.
       for (let index = 1; index <= 5; index += 1) {
-        await createOpportunityFor(clientId, contactId, {
+        const created = await createOpportunityFor(clientId, contactId, {
           name: `Oportunidade ${index}`,
         });
+        await client.query(
+          "UPDATE opportunities SET created_at = $1 WHERE id = $2",
+          [`2026-01-0${index}T00:00:00.000Z`, created.id],
+        );
       }
 
       const rows = await repo.getRecentOpportunities();
