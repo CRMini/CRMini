@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Breadcrumbs from "@/components/breadcrumbs";
 import EmptyState from "@/components/empty-state";
+import { RowActionLink } from "@/components/row-action";
 import { useEffect, useState } from "react";
 import { formatBrazilDateTime } from "@/lib/brazil-date";
 import { LEAD_STATUSES } from "@/lib/lead-status";
@@ -159,7 +160,7 @@ export default function LeadsView() {
       ) : (
         <div className="contact-list">
           {leads.map((lead) => (
-            <article className="contact-row" key={lead.id}>
+            <article className="contact-row lead-row" key={lead.id}>
               <div className="contact-list-avatar" aria-hidden="true">
                 {companyInitials(lead)}
               </div>
@@ -187,6 +188,13 @@ export default function LeadsView() {
                   {formatBrazilDateTime(lead.updated_at)}
                 </span>
               </div>
+              <span className="contact-row-actions">
+                <RowActionLink
+                  href={`/leads/${lead.id}/editar`}
+                  icon="✎"
+                  label={`Editar lead ${lead.company_name}`}
+                />
+              </span>
             </article>
           ))}
         </div>

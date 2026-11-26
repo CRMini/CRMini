@@ -142,6 +142,20 @@ describe("Tela de leads", () => {
     );
   });
 
+  it("oferece a edição em cada linha da listagem", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(ok([lead()]));
+    render(<LeadsView />);
+
+    const row = (await screen.findByText("Empresa Alfa Ltda.")).closest(
+      ".contact-row",
+    ) as HTMLElement;
+    const edit = within(row).getByRole("link", {
+      name: "Editar lead Empresa Alfa Ltda.",
+    });
+
+    expect(edit).toHaveAttribute("href", "/leads/lead-1/editar");
+  });
+
   it("exibe estado vazio sem filtro quando não há leads", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(ok([]));
     render(<LeadsView />);
