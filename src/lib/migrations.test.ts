@@ -564,6 +564,7 @@ describe("CLI de migrations", () => {
       { version: "002" },
       { version: "003" },
       { version: "004" },
+      { version: "005" },
     ]);
     expect(tableExists(db, "app_settings")).toBe(true);
     expect(tableExists(db, "events")).toBe(true);
