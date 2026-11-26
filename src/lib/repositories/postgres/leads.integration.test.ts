@@ -388,4 +388,98 @@ describe.runIf(Boolean(testUrl))("leads no PostgreSQL real", () => {
       ).toBeNull();
     });
   });
+
+  describe("conversão", () => {
+    const convertibleLead = (overrides: Record<string, unknown> = {}) => ({
+      company_name: "Empresa Conversão Ltda.",
+      trade_name: "Conversão",
+      tax_id: "11222333000181",
+      industry_id: industryId,
+      segment_id: segmentId,
+      revenue_band: "Até R$ 10 milhões",
+      employee_band: "1-50",
+      street: "Rua da Empresa",
+      street_number: "10",
+      complement: null,
+      neighborhood: "Centro",
+      city_id: "city-sao-paulo",
+      state: "SP",
+      postal_code: "01000-000",
+      country_id: "country-brasil",
+      lead_source_id: "lead-source-site",
+      contact_first_name: "Marina",
+      contact_last_name: "Costa",
+      contact_email: "marina@example.com",
+      contact_same_address: 1,
+      desired_solution: "Migração de ERP",
+      identified_pain: "Sistemas legados",
+      budget: "250000.00",
+      ...overrides,
+    });
+
+    async function leadIn(status: string) {
+      const created = await repo.createLead(convertibleLead());
+      await repo.updateLead(created!.id, {
+        ...convertibleLead(),
+        status,
+      });
+      return created!.id;
+    }
+
+    it("cria empresa, contato e oportunidade e promove o lead", async () => {
+      const id = await leadIn("Em contato");
+
+      const result = await repo.convertLead(id, { name: "Oportunidade ERP" });
+
+      expect(result).toBeTruthy();
+      const lead = await repo.getLead(id);
+      expect(lead?.status).toBe("Qualificado");
+      expect(lead?.opportunity_id).toBe(result!.opportunity_id);
+
+      const clientRow = await client.query(
+        "SELECT company_name, industry, city FROM clients WHERE id = $1",
+        [result!.client_id],
+      );
+      expect(clientRow.rows[0]).toMatchObject({
+        company_name: "Empresa Conversão Ltda.",
+        industry: "Tecnologia",
+        city: "São Paulo",
+      });
+
+      const contactRow = await client.query(
+        "SELECT full_name, email, street, is_primary FROM contacts WHERE id = $1",
+        [result!.contact_id],
+      );
+      expect(contactRow.rows[0]).toMatchObject({
+        full_name: "Marina Costa",
+        email: "marina@example.com",
+        street: "Rua da Empresa",
+        is_primary: 1,
+      });
+
+      const opportunityRow = await client.query(
+        "SELECT name, customer_need, offered_solution, budget FROM opportunities WHERE id = $1",
+        [result!.opportunity_id],
+      );
+      expect(opportunityRow.rows[0]).toMatchObject({
+        name: "Oportunidade ERP",
+        customer_need: "Sistemas legados",
+        offered_solution: "Migração de ERP",
+        budget: "250000.00",
+      });
+    });
+
+    it("não converte fora da janela e não deixa resíduo", async () => {
+      const id = await leadIn("Novo");
+
+      expect(await repo.convertLead(id, { name: "Oportunidade" })).toBeNull();
+
+      const counts = await client.query(
+        "SELECT (SELECT count(*) FROM clients) AS clients, (SELECT count(*) FROM opportunities) AS opportunities",
+      );
+      expect(Number(counts.rows[0].clients)).toBe(0);
+      expect(Number(counts.rows[0].opportunities)).toBe(0);
+      expect((await repo.getLead(id))?.status).toBe("Novo");
+    });
+  });
 });

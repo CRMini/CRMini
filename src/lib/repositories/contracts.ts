@@ -136,6 +136,12 @@ export interface EventsRepository {
   deactivateEvent(id: string): Promise<Record<string, any> | null>;
 }
 
+export type LeadConversionResult = {
+  client_id: string;
+  contact_id: string;
+  opportunity_id: string;
+};
+
 export interface LeadsRepository {
   listLeads(
     search: string | null,
@@ -152,6 +158,10 @@ export interface LeadsRepository {
     id: string,
     body: Record<string, unknown>,
   ): Promise<Record<string, any> | null>;
+  convertLead(
+    id: string,
+    opportunity: Record<string, unknown>,
+  ): Promise<LeadConversionResult | null>;
 }
 
 export interface SettingsRepository {

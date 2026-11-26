@@ -1,5 +1,6 @@
 import { getRepositories } from "./registry";
 import type { LeadReference, LeadReferenceType } from "@/lib/lead-references";
+import type { LeadConversionResult } from "./contracts";
 
 export function listLeads(
   search: string | null,
@@ -36,4 +37,11 @@ export function updateLead(
   body: Record<string, unknown>,
 ): Promise<Record<string, any> | null> {
   return getRepositories().leads.updateLead(id, body);
+}
+
+export function convertLead(
+  id: string,
+  opportunity: Record<string, unknown>,
+): Promise<LeadConversionResult | null> {
+  return getRepositories().leads.convertLead(id, opportunity);
 }

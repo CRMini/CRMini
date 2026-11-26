@@ -618,3 +618,96 @@ describe("Edição de lead", () => {
     );
   });
 });
+
+describe("Conversão do lead", () => {
+  it("mostra a seção de conversão em Em contato e envia a oportunidade", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === "/api/leads/references" && !init?.method)
+          return jsonResponse(references);
+        if (url === "/api/leads/lead-1" && !init?.method)
+          return jsonResponse({ ...storedLead, status: "Em contato" });
+        if (url === "/api/leads/lead-1/convert" && init?.method === "POST")
+          return jsonResponse(
+            {
+              client_id: "client-1",
+              contact_id: "contact-1",
+              opportunity_id: "opp-1",
+            },
+            201,
+          );
+        throw new Error(`fetch inesperado: ${url}`);
+      });
+    render(<LeadForm leadId="lead-1" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Criar oportunidade" }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Nome da oportunidade"), {
+      target: { value: "Oportunidade ERP" },
+    });
+    fireEvent.change(screen.getByLabelText("Valor (R$)"), {
+      target: { value: "250000.00" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Criar oportunidade" }),
+    );
+
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/oportunidades"),
+    );
+
+    const call = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url) === "/api/leads/lead-1/convert" && init?.method === "POST",
+    );
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+      name: "Oportunidade ERP",
+      value: "250000.00",
+      project_hours: "",
+    });
+  });
+
+  it("não mostra a seção de conversão em Novo", async () => {
+    mockEditFetch();
+    render(<LeadForm leadId="lead-1" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar lead" });
+
+    expect(
+      screen.queryByRole("heading", { name: "Criar oportunidade" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("exibe o erro da conversão", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/leads/references" && !init?.method)
+        return jsonResponse(references);
+      if (url === "/api/leads/lead-1" && !init?.method)
+        return jsonResponse({ ...storedLead, status: "Qualificando" });
+      if (url === "/api/leads/lead-1/convert" && init?.method === "POST")
+        return jsonResponse(
+          { error: "O lead não pode mais ser convertido." },
+          409,
+        );
+      throw new Error(`fetch inesperado: ${url}`);
+    });
+    render(<LeadForm leadId="lead-1" />);
+
+    await screen.findByRole("heading", { name: "Criar oportunidade" });
+    fireEvent.change(screen.getByLabelText("Nome da oportunidade"), {
+      target: { value: "Oportunidade" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Criar oportunidade" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "O lead não pode mais ser convertido.",
+    );
+    expect(push).not.toHaveBeenCalled();
+  });
+});

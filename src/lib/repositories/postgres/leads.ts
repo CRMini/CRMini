@@ -14,6 +14,7 @@ import {
 } from "@/lib/lead-validation";
 import type { LeadsRepository } from "../contracts";
 import { getPostgresPool } from "./connection";
+import { convertLead } from "./lead-conversion";
 
 /**
  * Listagem de leads (somente ativos), equivalente ao adaptador SQLite. A busca
@@ -130,4 +131,5 @@ export const postgresLeadsRepository: LeadsRepository = {
   createLead,
   getLead,
   updateLead,
+  convertLead,
 };

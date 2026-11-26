@@ -366,6 +366,11 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(Boolean(leadId));
   const [status, setStatus] = useState<LeadStatus | "">("");
+  const [opportunityName, setOpportunityName] = useState("");
+  const [opportunityValue, setOpportunityValue] = useState("");
+  const [opportunityHours, setOpportunityHours] = useState("");
+  const [converting, setConverting] = useState(false);
+  const [conversionError, setConversionError] = useState("");
   const [disqualificationReason, setDisqualificationReason] = useState("");
   const cepRequestId = useRef({ company: 0, contact: 0 });
 
@@ -552,6 +557,33 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
     } catch {
       if (requestId !== cepRequestId.current[target]) return;
       setCepError(CEP_LOOKUP_MESSAGE);
+    }
+  }
+
+  async function convert() {
+    setConverting(true);
+    setConversionError("");
+    try {
+      const response = await fetch(`/api/leads/${leadId}/convert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: opportunityName,
+          value: opportunityValue,
+          project_hours: opportunityHours,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Não foi possível converter o lead.");
+      router.push("/oportunidades");
+      router.refresh();
+    } catch (reason) {
+      setConversionError(
+        reason instanceof Error ? reason.message : "Erro ao converter.",
+      );
+    } finally {
+      setConverting(false);
     }
   }
 
@@ -1059,6 +1091,55 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
           </button>
         </div>
       </form>
+
+      {leadId && (status === "Em contato" || status === "Qualificando") && (
+        <section className="form-section lead-conversion">
+          <div className="form-section-heading">
+            <div>
+              <h2>Criar oportunidade</h2>
+              <p>
+                Cria a empresa e o contato deste lead e a oportunidade
+                vinculada. O lead passa para Qualificado.
+              </p>
+            </div>
+          </div>
+          <div className="form-grid">
+            <Field
+              label="Nome da oportunidade"
+              required
+              value={opportunityName}
+              onChange={setOpportunityName}
+            />
+            <Field
+              label="Valor (R$)"
+              value={opportunityValue}
+              onChange={setOpportunityValue}
+              placeholder="1234.56"
+            />
+            <Field
+              label="Horas de projeto"
+              value={opportunityHours}
+              onChange={setOpportunityHours}
+              placeholder="160"
+            />
+          </div>
+          {conversionError && (
+            <p className="form-error" role="alert">
+              {conversionError}
+            </p>
+          )}
+          <div className="form-actions">
+            <button
+              type="button"
+              className="primary-button"
+              disabled={converting || !opportunityName.trim()}
+              onClick={() => void convert()}
+            >
+              {converting ? "Convertendo..." : "Criar oportunidade"}
+            </button>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

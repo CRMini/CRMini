@@ -1,4 +1,5 @@
 import { isValidCnpj, normalizeCnpj } from "@/lib/cnpj";
+import { validateOpportunityFields } from "@/lib/opportunity-validation";
 import { isValidEmail } from "@/lib/email";
 import {
   canTransitionLeadStatus,
@@ -399,6 +400,25 @@ export function validateLeadUpdate(
   }
 
   return null;
+}
+
+/**
+ * Pré-condições da conversão (D-09/D-10): o lead precisa estar em contato ou
+ * em qualificação e ter nome e e-mail de contato, porque `contacts.full_name`
+ * é obrigatório. A oportunidade é validada como na criação direta.
+ */
+export function validateLeadConversion(
+  lead: Record<string, unknown>,
+  opportunity: Record<string, unknown>,
+): string | null {
+  if (lead.status !== "Em contato" && lead.status !== "Qualificando")
+    return "Só é possível converter leads em Em contato ou Qualificando.";
+  if (!text(lead.contact_first_name))
+    return "Informe o nome do contato antes de converter.";
+  const email = text(lead.contact_email);
+  if (!email || !isValidEmail(email))
+    return "Informe um e-mail válido do contato antes de converter.";
+  return validateOpportunityFields(opportunity);
 }
 
 /**
