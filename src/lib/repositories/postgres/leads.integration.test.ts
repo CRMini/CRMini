@@ -327,4 +327,65 @@ describe.runIf(Boolean(testUrl))("leads no PostgreSQL real", () => {
       ).rejects.toThrow(/foreign key/i);
     });
   });
+
+  describe("edição", () => {
+    const fullLead = (overrides: Record<string, unknown> = {}) => ({
+      company_name: "Empresa Alfa Ltda.",
+      trade_name: "Alfa",
+      tax_id: "11222333000181",
+      industry_id: industryId,
+      segment_id: segmentId,
+      revenue_band: "Até R$ 10 milhões",
+      employee_band: "1-50",
+      street: "Rua Teste",
+      street_number: "100",
+      neighborhood: "Centro",
+      city_id: "city-sao-paulo",
+      state: "SP",
+      postal_code: "01000-000",
+      country_id: "country-brasil",
+      lead_source_id: "lead-source-site",
+      ...overrides,
+    });
+
+    it("busca o lead e atualiza campos com o status", async () => {
+      const created = await repo.createLead(fullLead());
+
+      const found = await repo.getLead(created!.id);
+      expect(found?.company_name).toBe("Empresa Alfa Ltda.");
+      expect(found?.status).toBe("Novo");
+
+      const updated = await repo.updateLead(created!.id, {
+        ...fullLead({ company_name: "Empresa Editada Ltda." }),
+        status: "Em contato",
+      });
+
+      expect(updated?.company_name).toBe("Empresa Editada Ltda.");
+      expect(updated?.status).toBe("Em contato");
+      expect(updated?.disqualification_reason).toBeNull();
+    });
+
+    it("grava motivo ao desqualificar", async () => {
+      const created = await repo.createLead(fullLead());
+
+      const updated = await repo.updateLead(created!.id, {
+        ...fullLead(),
+        status: "Desqualificado",
+        disqualification_reason: "Prazo",
+      });
+
+      expect(updated?.status).toBe("Desqualificado");
+      expect(updated?.disqualification_reason).toBe("Prazo");
+    });
+
+    it("devolve null para lead inexistente", async () => {
+      expect(await repo.getLead("lead-inexistente")).toBeNull();
+      expect(
+        await repo.updateLead("lead-inexistente", {
+          ...fullLead(),
+          status: "Novo",
+        }),
+      ).toBeNull();
+    });
+  });
 });

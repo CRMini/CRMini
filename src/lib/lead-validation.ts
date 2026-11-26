@@ -1,5 +1,11 @@
 import { isValidCnpj, normalizeCnpj } from "@/lib/cnpj";
 import { isValidEmail } from "@/lib/email";
+import {
+  canTransitionLeadStatus,
+  isLeadDisqualificationReason,
+  isLeadStatus,
+  type LeadStatus,
+} from "@/lib/lead-status";
 
 /**
  * Regras de criação de lead no nível de domínio (usadas pela API, não pela tela).
@@ -246,6 +252,13 @@ export function validateLeadCreation(
   if ("converted_at" in body && body.converted_at)
     return "Um lead novo não pode estar convertido.";
 
+  return validateLeadFields(body);
+}
+
+/** Campos comuns à criação e à edição. */
+export function validateLeadFields(
+  body: Record<string, unknown>,
+): string | null {
   for (const [field, message] of REQUIRED_TEXT_FIELDS) {
     if (!text(body[field])) return message;
   }
@@ -356,6 +369,39 @@ export function validateLeadCreation(
 }
 
 /**
+ * Valida a edição de um lead. Os campos são os mesmos da criação; o status só
+ * pode mudar por transição permitida, e `Qualificado` nunca é escolha manual.
+ */
+export function validateLeadUpdate(
+  current: { status: LeadStatus },
+  body: Record<string, unknown>,
+): string | null {
+  const fieldsError = validateLeadFields(body);
+  if (fieldsError) return fieldsError;
+
+  if (typeof body.status !== "string" || !isLeadStatus(body.status))
+    return "Selecione um status válido.";
+  const status = body.status;
+
+  if (
+    status !== current.status &&
+    !canTransitionLeadStatus(current.status, status)
+  )
+    return "Essa mudança de status não é permitida.";
+
+  if (status === "Desqualificado") {
+    const reason = text(body.disqualification_reason);
+    if (!reason) return "Selecione o motivo da desqualificação.";
+    if (!isLeadDisqualificationReason(reason))
+      return "Motivo de desqualificação inválido.";
+  } else if (text(body.disqualification_reason)) {
+    return "O motivo de desqualificação só existe em lead desqualificado.";
+  }
+
+  return null;
+}
+
+/**
  * Converte o corpo validado para o registro gravado nas duas implementações.
  * Normaliza CNPJ para dígitos, aplica trim, troca vazio por nulo e fixa o
  * status inicial.
@@ -364,7 +410,27 @@ export function toLeadRecord(
   id: string,
   body: Record<string, unknown>,
 ): Record<LeadWriteColumn | "id", unknown> {
-  const record = { id } as Record<LeadWriteColumn | "id", unknown>;
+  return { ...toLeadFields(body), id, status: "Novo" };
+}
+
+/**
+ * Campos graváveis em edição, sem o status — que é validado à parte por
+ * `validateLeadUpdate` e gravado junto na mesma instrução.
+ */
+export function toLeadUpdateRecord(
+  body: Record<string, unknown>,
+): Record<LeadWriteColumn | "disqualification_reason", unknown> {
+  return {
+    ...toLeadFields(body),
+    status: body.status,
+    disqualification_reason: text(body.disqualification_reason),
+  };
+}
+
+function toLeadFields(
+  body: Record<string, unknown>,
+): Record<LeadWriteColumn, unknown> {
+  const record = {} as Record<LeadWriteColumn, unknown>;
   for (const column of LEAD_WRITE_COLUMNS) {
     record[column] = text(body[column]);
   }
@@ -379,7 +445,6 @@ export function toLeadRecord(
   record.state = body.state;
   record.country_id = text(body.country_id);
   record.lead_source_id = text(body.lead_source_id);
-  record.status = "Novo";
   record.contact_same_address =
     body.contact_same_address === undefined ||
     body.contact_same_address === null ||

@@ -147,6 +147,11 @@ export interface LeadsRepository {
     name: string,
   ): Promise<LeadReference | null>;
   createLead(body: Record<string, unknown>): Promise<{ id: string } | null>;
+  getLead(id: string): Promise<Record<string, any> | null>;
+  updateLead(
+    id: string,
+    body: Record<string, unknown>,
+  ): Promise<Record<string, any> | null>;
 }
 
 export interface SettingsRepository {

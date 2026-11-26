@@ -26,3 +26,14 @@ export function createLead(
 ): Promise<{ id: string } | null> {
   return getRepositories().leads.createLead(body);
 }
+
+export function getLead(id: string): Promise<Record<string, any> | null> {
+  return getRepositories().leads.getLead(id);
+}
+
+export function updateLead(
+  id: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, any> | null> {
+  return getRepositories().leads.updateLead(id, body);
+}

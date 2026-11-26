@@ -6,7 +6,14 @@ vi.hoisted(() => {
 });
 
 import { getDb } from "@/lib/db";
-import { createLead, createLeadReference, listLeadReferences, listLeads } from "./leads";
+import {
+  createLead,
+  createLeadReference,
+  getLead,
+  listLeadReferences,
+  listLeads,
+  updateLead,
+} from "./leads";
 
 // industries e segments começam vazias (sem seed), então os testes criam uma
 // entrada de cada para satisfazer as FKs NOT NULL de `leads`.
@@ -338,26 +345,26 @@ describe("createLeadReference", () => {
   });
 });
 
-describe("createLead", () => {
-  const validLead = (overrides: Record<string, unknown> = {}) => ({
-    company_name: "Empresa Alfa Ltda.",
-    trade_name: "Alfa",
-    tax_id: "11222333000181",
-    industry_id: industryId,
-    segment_id: segmentId,
-    revenue_band: "Até R$ 10 milhões",
-    employee_band: "1-50",
-    street: "Rua Teste",
-    street_number: "100",
-    neighborhood: "Centro",
-    city_id: "city-sao-paulo",
-    state: "SP",
-    postal_code: "01000-000",
-    country_id: "country-brasil",
-    lead_source_id: "lead-source-site",
-    ...overrides,
-  });
+const validLead = (overrides: Record<string, unknown> = {}) => ({
+  company_name: "Empresa Alfa Ltda.",
+  trade_name: "Alfa",
+  tax_id: "11222333000181",
+  industry_id: industryId,
+  segment_id: segmentId,
+  revenue_band: "Até R$ 10 milhões",
+  employee_band: "1-50",
+  street: "Rua Teste",
+  street_number: "100",
+  neighborhood: "Centro",
+  city_id: "city-sao-paulo",
+  state: "SP",
+  postal_code: "01000-000",
+  country_id: "country-brasil",
+  lead_source_id: "lead-source-site",
+  ...overrides,
+});
 
+describe("createLead", () => {
   it("cria o lead em Novo e devolve o id", async () => {
     const created = await createLead(validLead());
 
@@ -416,5 +423,53 @@ describe("createLead", () => {
     await expect(
       createLead(validLead({ industry_id: "industry-inexistente" })),
     ).rejects.toThrow(/FOREIGN KEY/);
+  });
+});
+
+describe("getLead", () => {
+  it("devolve o lead pelo id", async () => {
+    const created = insertLead({ company_name: "Empresa Buscada Ltda." });
+
+    const found = await getLead(String(created.id));
+
+    expect(found?.company_name).toBe("Empresa Buscada Ltda.");
+    expect(found?.status).toBe("Novo");
+  });
+
+  it("devolve null quando o lead não existe", async () => {
+    expect(await getLead("lead-inexistente")).toBeNull();
+  });
+});
+
+describe("updateLead", () => {
+  it("edita campos e mantém o status atual", async () => {
+    const created = await createLead(validLead());
+
+    const updated = await updateLead(created!.id, {
+      ...validLead({ company_name: "Empresa Editada Ltda." }),
+      status: "Novo",
+    });
+
+    expect(updated?.company_name).toBe("Empresa Editada Ltda.");
+    expect(updated?.status).toBe("Novo");
+  });
+
+  it("grava a mudança de status e o motivo da desqualificação", async () => {
+    const created = await createLead(validLead());
+
+    const updated = await updateLead(created!.id, {
+      ...validLead(),
+      status: "Desqualificado",
+      disqualification_reason: "Prazo",
+    });
+
+    expect(updated?.status).toBe("Desqualificado");
+    expect(updated?.disqualification_reason).toBe("Prazo");
+  });
+
+  it("devolve null quando o lead não existe", async () => {
+    expect(
+      await updateLead("lead-inexistente", { ...validLead(), status: "Novo" }),
+    ).toBeNull();
   });
 });

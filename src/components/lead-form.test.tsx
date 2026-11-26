@@ -495,3 +495,126 @@ describe("Formulário de lead", () => {
     );
   });
 });
+
+const storedLead = {
+  id: "lead-1",
+  company_name: "Empresa Carregada Ltda.",
+  trade_name: "Carregada",
+  tax_id: "11222333000181",
+  industry_id: "industry-tecnologia",
+  segment_id: "segment-enterprise",
+  revenue_band: "Até R$ 10 milhões",
+  employee_band: "1-50",
+  street: "Rua Teste",
+  street_number: "100",
+  neighborhood: "Centro",
+  city_id: "city-sao-paulo",
+  state: "SP",
+  postal_code: "01000-000",
+  country_id: "country-brasil",
+  lead_source_id: "lead-source-site",
+  contact_same_address: 1,
+  status: "Novo",
+  disqualification_reason: null,
+};
+
+function mockEditFetch(putHandler: () => Response = () => jsonResponse(storedLead)) {
+  return vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/leads/references" && !init?.method)
+        return jsonResponse(references);
+      if (url === "/api/leads/lead-1" && !init?.method)
+        return jsonResponse(storedLead);
+      if (url === "/api/leads/lead-1" && init?.method === "PUT")
+        return putHandler();
+      throw new Error(`fetch inesperado: ${url}`);
+    });
+}
+
+describe("Edição de lead", () => {
+  it("carrega o lead e preenche o formulário", async () => {
+    mockEditFetch();
+    render(<LeadForm leadId="lead-1" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Carregando lead...");
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Editar lead" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Razão social")).toHaveValue(
+      "Empresa Carregada Ltda.",
+    );
+    expect(screen.getByLabelText("Cidade")).toHaveValue("city-sao-paulo");
+  });
+
+  it("oferece apenas as transições permitidas a partir do status atual", async () => {
+    mockEditFetch();
+    render(<LeadForm leadId="lead-1" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar lead" });
+
+    const status = screen.getByLabelText("Status do lead");
+    const options = within(status)
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+
+    expect(options).toEqual([
+      "Novo",
+      "Em contato",
+      "Qualificando",
+      "Reunião agendada",
+      "Desqualificado",
+    ]);
+    expect(options).not.toContain("Qualificado");
+  });
+
+  it("envia PUT com o status atual ao salvar", async () => {
+    const fetchMock = mockEditFetch();
+    render(<LeadForm leadId="lead-1" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar lead" });
+
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/leads"));
+    const put = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url) === "/api/leads/lead-1" && init?.method === "PUT",
+    );
+    const body = JSON.parse(String(put?.[1]?.body));
+    expect(body).toMatchObject({ status: "Novo" });
+  });
+
+  it("pede o motivo ao escolher Desqualificado", async () => {
+    mockEditFetch();
+    render(<LeadForm leadId="lead-1" />);
+    await screen.findByRole("heading", { level: 1, name: "Editar lead" });
+
+    fireEvent.change(screen.getByLabelText("Status do lead"), {
+      target: { value: "Desqualificado" },
+    });
+
+    const reason = screen.getByLabelText("Motivo da desqualificação");
+    expect(reason).toBeRequired();
+    expect(
+      within(reason).getAllByRole("option").map((option) => option.textContent),
+    ).toContain("Prazo");
+  });
+
+  it("mostra o erro quando o lead não carrega", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/leads/references" && !init?.method)
+        return jsonResponse(references);
+      if (url === "/api/leads/lead-1" && !init?.method)
+        return jsonResponse({ error: "Lead não encontrado." }, 404);
+      throw new Error(`fetch inesperado: ${url}`);
+    });
+
+    render(<LeadForm leadId="lead-1" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Lead não encontrado.",
+    );
+  });
+});

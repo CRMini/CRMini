@@ -9,6 +9,7 @@ import {
 import {
   LEAD_WRITE_COLUMNS,
   toLeadRecord,
+  toLeadUpdateRecord,
   type LeadWriteColumn,
 } from "@/lib/lead-validation";
 import type { LeadsRepository } from "../contracts";
@@ -95,9 +96,38 @@ export async function createLead(
   return result.rows[0] ?? null;
 }
 
+export async function getLead(
+  id: string,
+): Promise<Record<string, any> | null> {
+  const result = await getPostgresPool().query(
+    "SELECT * FROM leads WHERE id = $1",
+    [id],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function updateLead(
+  id: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, any> | null> {
+  const record = toLeadUpdateRecord(body);
+  const columns = Object.keys(record) as Array<keyof typeof record>;
+  const result = await getPostgresPool().query(
+    `UPDATE leads
+     SET ${columns.map((column, index) => `${column} = $${index + 1}`).join(", ")},
+       updated_at = to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+     WHERE id = $${columns.length + 1}
+     RETURNING *`,
+    [...columns.map((column) => record[column]), id],
+  );
+  return result.rows[0] ?? null;
+}
+
 export const postgresLeadsRepository: LeadsRepository = {
   listLeads,
   listLeadReferences,
   createLeadReference,
   createLead,
+  getLead,
+  updateLead,
 };
