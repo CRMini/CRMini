@@ -3229,3 +3229,13 @@ main.records-page .lead-form-sections .form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Tela de leads — linha com ação de edição (grade de 5 colunas) */
+main.records-page .lead-row {
+  grid-template-columns:
+    44px minmax(120px, 1.1fr) minmax(120px, 1fr) minmax(130px, 1fr)
+    auto;
+}
+main.records-page .lead-row .contact-row-actions {
+  justify-self: end;
+}
