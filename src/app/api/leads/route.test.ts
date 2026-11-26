@@ -45,13 +45,30 @@ describe("GET /api/leads", () => {
     expect(listLeads).toHaveBeenCalledWith("alfa", null);
   });
 
-  it("repassa o status", async () => {
+  it("repassa um status", async () => {
     const response = await GET(
       new NextRequest("http://localhost/api/leads?status=Qualificando"),
     );
 
     expect(response.status).toBe(200);
-    expect(listLeads).toHaveBeenCalledWith(null, "Qualificando");
+    expect(listLeads).toHaveBeenCalledWith(null, ["Qualificando"]);
+  });
+
+  it("repassa vários status e descarta os vazios", async () => {
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/leads?status=Novo&status=&status=Em%20contato",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listLeads).toHaveBeenCalledWith(null, ["Novo", "Em contato"]);
+  });
+
+  it("repassa null quando não há status", async () => {
+    await GET(new NextRequest("http://localhost/api/leads"));
+
+    expect(listLeads).toHaveBeenCalledWith(null, null);
   });
 
   it("rejeita status inválido sem chamar o repositório", async () => {

@@ -3252,3 +3252,70 @@ main.records-page .lead-conversion-actions {
   justify-content: flex-end;
   margin-top: 16px;
 }
+
+/* Tela de leads — filtro de status com lista de checkboxes */
+main.records-page .lead-status-filter {
+  position: relative;
+}
+main.records-page .lead-status-filter > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 38px;
+  width: 100%;
+  padding: 0 10px;
+  background: #fff;
+  border: 1px solid #dfe4dd;
+  border-radius: 4px;
+  color: #303630;
+  font: 12px "DM Sans", sans-serif;
+}
+main.records-page .lead-status-filter > summary:focus-visible {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #3986531c;
+}
+main.records-page .lead-status-filter > summary::-webkit-details-marker {
+  display: none;
+}
+main.records-page .lead-status-filter > summary::after {
+  content: "▾";
+  font-size: 10px;
+}
+main.records-page .lead-status-filter[open] > summary::after {
+  content: "▴";
+}
+main.records-page .lead-status-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  gap: 1px;
+  min-width: 172px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px #18241614;
+}
+main.records-page .lead-status-options .checkbox-field {
+  gap: 7px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+main.records-page .lead-status-options .checkbox-field:hover {
+  background: var(--wash);
+}
+main.records-page .lead-status-options .checkbox-field input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}

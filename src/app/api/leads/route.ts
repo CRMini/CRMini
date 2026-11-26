@@ -20,10 +20,15 @@ export async function GET(request: NextRequest) {
   try {
     const params = request.nextUrl.searchParams;
     const search = params.get("search")?.trim() || null;
-    const status = params.get("status") || null;
-    if (status && !isLeadStatus(status))
+    const statuses = params
+      .getAll("status")
+      .map((status) => status.trim())
+      .filter(Boolean);
+    if (statuses.some((status) => !isLeadStatus(status)))
       return NextResponse.json({ error: "Status inválido." }, { status: 400 });
-    return NextResponse.json(await listLeads(search, status));
+    return NextResponse.json(
+      await listLeads(search, statuses.length ? statuses : null),
+    );
   } catch {
     return NextResponse.json(
       { error: "Não foi possível carregar os leads." },

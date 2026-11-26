@@ -4,9 +4,9 @@ import type { LeadConversionResult } from "./contracts";
 
 export function listLeads(
   search: string | null,
-  status: string | null,
+  statuses: string[] | null,
 ): Promise<Record<string, any>[]> {
-  return getRepositories().leads.listLeads(search, status);
+  return getRepositories().leads.listLeads(search, statuses);
 }
 
 export function listLeadReferences(): Promise<
