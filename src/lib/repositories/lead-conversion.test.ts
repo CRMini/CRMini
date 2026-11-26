@@ -69,7 +69,7 @@ beforeEach(() => {
 
 describe("conversão do lead", () => {
   it("cria empresa, contato e oportunidade e promove o lead", async () => {
-    const id = await leadIn("Em contato");
+    const id = await leadIn("Em contato", { lead_source_id: "lead-source-site" });
 
     const result = await convertLead(id, { name: "Oportunidade ERP" });
 
@@ -84,13 +84,20 @@ describe("conversão do lead", () => {
     expect(lead?.converted_at).toBeTruthy();
 
     const client = getDb()
-      .prepare("SELECT company_name, trade_name, tax_id, industry, city, state FROM clients WHERE id = ?")
+      .prepare(
+        "SELECT company_name, trade_name, tax_id, industry, segment, revenue_band, employee_band, neighborhood, lead_source, city, state FROM clients WHERE id = ?",
+      )
       .get(result!.client_id);
     expect(client).toEqual({
       company_name: "Empresa Converte Ltda.",
       trade_name: "Converte",
       tax_id: "11222333000181",
       industry: "Tecnologia",
+      segment: "Enterprise",
+      revenue_band: "Até R$ 10 milhões",
+      employee_band: "1-50",
+      neighborhood: "Centro",
+      lead_source: "Site",
       city: "São Paulo",
       state: "SP",
     });

@@ -40,7 +40,7 @@ describe("getDb", () => {
     ]);
   });
 
-  it("registra as versões 001 a 005 em schema_migrations no banco novo", () => {
+  it("registra as versões 001 a 006 em schema_migrations no banco novo", () => {
     const rows = getDb()
       .prepare("SELECT version, name FROM schema_migrations ORDER BY version")
       .all();
@@ -50,6 +50,7 @@ describe("getDb", () => {
       { version: "003", name: "events" },
       { version: "004", name: "leads" },
       { version: "005", name: "contacts_address" },
+      { version: "006", name: "clients_lead_fields" },
     ]);
   });
 });

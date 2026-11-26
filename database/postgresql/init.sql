@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS clients (
   trade_name TEXT,
   tax_id TEXT,
   industry TEXT,
+  segment TEXT,
+  revenue_band TEXT,
+  employee_band TEXT,
   website TEXT,
   phone TEXT,
   email TEXT,
@@ -42,6 +45,8 @@ CREATE TABLE IF NOT EXISTS clients (
   street TEXT,
   street_number TEXT,
   complement TEXT,
+  neighborhood TEXT,
+  lead_source TEXT,
   city TEXT,
   state TEXT,
   country TEXT DEFAULT 'Brasil',
@@ -51,6 +56,13 @@ CREATE TABLE IF NOT EXISTS clients (
   created_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
   updated_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
 );
+
+-- Campos herdados do lead na conversão (spec §11), para bancos existentes.
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS segment TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS revenue_band TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS employee_band TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS neighborhood TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS lead_source TEXT;
 
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,
