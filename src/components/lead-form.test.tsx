@@ -711,3 +711,78 @@ describe("Conversão do lead", () => {
     expect(push).not.toHaveBeenCalled();
   });
 });
+
+describe("Máscara de valores monetários", () => {
+  it("formata o budget enquanto digita e envia o decimal canônico", async () => {
+    const fetchMock = mockFetch();
+    render(<LeadForm />);
+    await screen.findByRole("option", { name: "Tecnologia" });
+
+    const budget = screen.getByLabelText("Budget do projeto (R$)");
+    fireEvent.change(budget, { target: { value: "123456" } });
+    expect(budget).toHaveValue("1.234,56");
+
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/leads"));
+
+    const post = fetchMock.mock.calls.find(
+      ([url, init]) => String(url) === "/api/leads" && init?.method === "POST",
+    );
+    expect(JSON.parse(String(post?.[1]?.body)).budget).toBe("1234.56");
+  });
+
+  it("mostra o budget gravado já formatado ao editar", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/leads/references" && !init?.method)
+        return jsonResponse(references);
+      if (url === "/api/leads/lead-1" && !init?.method)
+        return jsonResponse({ ...storedLead, budget: "250000.00" });
+      throw new Error(`fetch inesperado: ${url}`);
+    });
+    render(<LeadForm leadId="lead-1" />);
+
+    await screen.findByRole("heading", { level: 1, name: "Editar lead" });
+    expect(screen.getByLabelText("Budget do projeto (R$)")).toHaveValue(
+      "250.000,00",
+    );
+  });
+
+  it("envia o valor da oportunidade como decimal canônico", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === "/api/leads/references" && !init?.method)
+          return jsonResponse(references);
+        if (url === "/api/leads/lead-1" && !init?.method)
+          return jsonResponse({ ...storedLead, status: "Qualificando" });
+        if (url === "/api/leads/lead-1/convert" && init?.method === "POST")
+          return jsonResponse({ opportunity_id: "opp-1" }, 201);
+        throw new Error(`fetch inesperado: ${url}`);
+      });
+    render(<LeadForm leadId="lead-1" />);
+
+    await screen.findByRole("heading", { name: "Criar oportunidade" });
+    fireEvent.change(screen.getByLabelText("Nome da oportunidade"), {
+      target: { value: "Oportunidade ERP" },
+    });
+    fireEvent.change(screen.getByLabelText("Valor (R$)"), {
+      target: { value: "25000000" },
+    });
+    expect(screen.getByLabelText("Valor (R$)")).toHaveValue("250.000,00");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Criar oportunidade" }),
+    );
+
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith("/oportunidades"),
+    );
+    const call = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url) === "/api/leads/lead-1/convert" && init?.method === "POST",
+    );
+    expect(JSON.parse(String(call?.[1]?.body)).value).toBe("250000.00");
+  });
+});

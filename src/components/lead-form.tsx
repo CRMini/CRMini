@@ -8,7 +8,13 @@ import Field from "@/components/form-field";
 import { isValidCep, normalizeCep, type CepAddress } from "@/lib/cep";
 import { isValidCnpj } from "@/lib/cnpj";
 import { isValidEmail } from "@/lib/email";
-import { formatCep, formatCnpj } from "@/lib/masks";
+import {
+  formatCep,
+  formatCnpj,
+  formatCurrencyFromCanonical,
+  formatCurrencyInput,
+  parseCurrencyInput,
+} from "@/lib/masks";
 import { normalizeSearch } from "@/lib/normalize-search";
 import { formatPhone } from "@/lib/phone";
 import {
@@ -352,6 +358,7 @@ function toFormData(lead: Record<string, unknown>): LeadFormData {
     const value = lead[key];
     form[key] = typeof value === "string" ? value : "";
   }
+  form.budget = formatCurrencyFromCanonical(form.budget);
   return form;
 }
 
@@ -569,7 +576,7 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: opportunityName,
-          value: opportunityValue,
+          value: parseCurrencyInput(opportunityValue),
           project_hours: opportunityHours,
         }),
       });
@@ -602,6 +609,7 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...data,
+            budget: parseCurrencyInput(data.budget),
             contact_same_address: sameAddress ? 1 : 0,
             ...(leadId
               ? {
@@ -960,8 +968,9 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
               <Field
                 label="Budget do projeto (R$)"
                 value={data.budget}
+                format={formatCurrencyInput}
                 onChange={(value) => update("budget", value)}
-                placeholder="1234.56"
+                placeholder="0,00"
               />
               <ValueSelect
                 label="Possui orçamento? (Budget)"
@@ -1113,8 +1122,9 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
             <Field
               label="Valor (R$)"
               value={opportunityValue}
+              format={formatCurrencyInput}
               onChange={setOpportunityValue}
-              placeholder="1234.56"
+              placeholder="0,00"
             />
             <Field
               label="Horas de projeto"
@@ -1128,7 +1138,7 @@ export default function LeadForm({ leadId }: { leadId?: string }) {
               {conversionError}
             </p>
           )}
-          <div className="form-actions">
+          <div className="lead-conversion-actions">
             <button
               type="button"
               className="primary-button"
