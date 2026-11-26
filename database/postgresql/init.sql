@@ -63,11 +63,29 @@ CREATE TABLE IF NOT EXISTS contacts (
   birthday TEXT,
   linkedin_url TEXT,
   notes TEXT,
+  street TEXT,
+  street_number TEXT,
+  complement TEXT,
+  neighborhood TEXT,
+  city TEXT,
+  state TEXT,
+  postal_code TEXT,
+  country TEXT,
   is_primary INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0, 1)),
   is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
   updated_at TEXT NOT NULL DEFAULT to_char(now() at time zone 'utc', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
 );
+
+-- D-07: bancos existentes recebem as colunas de endereço do contato.
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS street TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS street_number TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS complement TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS neighborhood TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS postal_code TEXT;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS country TEXT;
 
 CREATE INDEX IF NOT EXISTS contacts_client_id_idx ON contacts(client_id);
 CREATE INDEX IF NOT EXISTS clients_company_name_idx ON clients(company_name);
