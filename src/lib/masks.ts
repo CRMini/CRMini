@@ -134,3 +134,36 @@ export function formatCepForDisplay(value: string | null | undefined): string {
 
   return onlyDigits(text).length === maxCepDigits ? formatCep(text) : text;
 }
+
+const CURRENCY_MAX_DIGITS = 14;
+
+/**
+ * Máscara de valor monetário em BRL para digitação: os dígitos entram como
+ * centavos, então `123456` vira `1.234,56`. O banco guarda o decimal canônico
+ * (`1234.56`), convertido por `parseCurrencyInput`.
+ */
+export function formatCurrencyInput(value: string | null | undefined): string {
+  const digits = (value ?? "").replace(/\D/g, "").slice(0, CURRENCY_MAX_DIGITS);
+  if (!digits) return "";
+  const cents = digits.padStart(3, "0");
+  const whole = cents.slice(0, -2).replace(/^0+(?=\d)/, "");
+  const fraction = cents.slice(-2);
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${grouped || "0"},${fraction}`;
+}
+
+/** Converte o valor exibido para o decimal canônico: `1.234,56` → `1234.56`. */
+export function parseCurrencyInput(value: string | null | undefined): string {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  const cents = digits.padStart(3, "0");
+  return `${cents.slice(0, -2)}.${cents.slice(-2)}`;
+}
+
+/** Converte o decimal canônico do banco para exibição: `250000.00` → `250.000,00`. */
+export function formatCurrencyFromCanonical(
+  value: string | null | undefined,
+): string {
+  if (!value) return "";
+  return formatCurrencyInput(value);
+}

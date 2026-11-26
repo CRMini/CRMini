@@ -4,6 +4,9 @@ import {
   formatCepForDisplay,
   formatCnpj,
   formatCnpjForDisplay,
+  formatCurrencyFromCanonical,
+  formatCurrencyInput,
+  parseCurrencyInput,
 } from "./masks";
 
 describe("formatCnpj", () => {
@@ -169,5 +172,42 @@ describe("formatCepForDisplay", () => {
   it("remove espaços nas extremidades de valores preservados", () => {
     expect(formatCepForDisplay("  CEP pendente  ")).toBe("CEP pendente");
     expect(formatCepForDisplay("  0131010  ")).toBe("0131010");
+  });
+});
+
+describe("máscara de valor monetário", () => {
+  it("formata a digitação como centavos em BRL", () => {
+    expect(formatCurrencyInput("1")).toBe("0,01");
+    expect(formatCurrencyInput("123")).toBe("1,23");
+    expect(formatCurrencyInput("123456")).toBe("1.234,56");
+    expect(formatCurrencyInput("25000000")).toBe("250.000,00");
+    expect(formatCurrencyInput("")).toBe("");
+  });
+
+  it("ignora caracteres não numéricos e limita o tamanho", () => {
+    expect(formatCurrencyInput("R$ 1.234,56")).toBe("1.234,56");
+    expect(formatCurrencyInput("999999999999999999")).toBe(
+      "999.999.999.999,99",
+    );
+  });
+
+  it("converte a exibição para o decimal canônico do banco", () => {
+    expect(parseCurrencyInput("1.234,56")).toBe("1234.56");
+    expect(parseCurrencyInput("250.000,00")).toBe("250000.00");
+    expect(parseCurrencyInput("0,05")).toBe("0.05");
+    expect(parseCurrencyInput("")).toBe("");
+  });
+
+  it("formata o decimal canônico para edição", () => {
+    expect(formatCurrencyFromCanonical("250000.00")).toBe("250.000,00");
+    expect(formatCurrencyFromCanonical("0.50")).toBe("0,50");
+    expect(formatCurrencyFromCanonical(null)).toBe("");
+  });
+
+  it("faz ida e volta sem perder centavos", () => {
+    for (const canonical of ["0.01", "12.34", "1234.56", "250000.00"])
+      expect(parseCurrencyInput(formatCurrencyFromCanonical(canonical))).toBe(
+        canonical,
+      );
   });
 });
