@@ -54,6 +54,10 @@ const expectedPaths = [
   "/api/contacts",
   "/api/contacts/{id}",
   "/api/contacts/import",
+  "/api/leads",
+  "/api/leads/{id}",
+  "/api/leads/{id}/convert",
+  "/api/leads/references",
   "/api/opportunities",
   "/api/opportunities/{id}",
   "/api/tasks",
@@ -118,11 +122,11 @@ describe("Documento OpenAPI", () => {
     expect(document.servers).toEqual([{ url: "/" }]);
   });
 
-  it("cobre exatamente as 17 rotas documentadas", () => {
+  it("cobre exatamente as 21 rotas documentadas", () => {
     expect(Object.keys(document.paths).sort()).toEqual(
       [...expectedPaths].sort(),
     );
-    expect(Object.keys(document.paths)).toHaveLength(17);
+    expect(Object.keys(document.paths)).toHaveLength(21);
   });
 
   it("usa tags válidas em todas as operações", () => {
@@ -238,7 +242,9 @@ describe("Documento OpenAPI", () => {
         `${path} usa a palavra-chave nullable`,
       ).toBe(false);
 
-      if (node.type !== undefined) {
+      // `type` também é nome de propriedade (LeadReferenceInput.type); só é
+      // palavra-chave quando o valor é string ou lista de strings.
+      if (typeof node.type === "string" || Array.isArray(node.type)) {
         const types = Array.isArray(node.type) ? node.type : [node.type];
         expect(types.length, `${path}.type vazio`).toBeGreaterThan(0);
         for (const type of types) {
