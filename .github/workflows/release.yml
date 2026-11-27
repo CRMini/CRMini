@@ -18,8 +18,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: windows-latest
+  # O gate roda no Linux, como no restante do CI: parte da suíte (caminhos do
+  # Electron e do SQLite) assume caminhos POSIX e não roda no Windows. O
+  # empacotamento é o que precisa do Windows, porque o binário nativo do
+  # better-sqlite3 é por plataforma.
+  tests:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,6 +42,22 @@ jobs:
       # uma tag com teste ou cobertura falhando não gere instalador publicado.
       - name: Executar testes automatizados
         run: npm run coverage
+
+  release:
+    needs: tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
 
       # Falha antes do empacotamento (que é caro) se a tag não casar com a versão.
       - name: Conferir versão da tag
